@@ -922,6 +922,13 @@ img { display: block; }
   color: #dc2626;
 }
 
+.map-buttons button img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 @media (max-width: 360px) {
   .guestbook-input-row {
     grid-template-columns: 1fr;
