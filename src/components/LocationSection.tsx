@@ -17,28 +17,43 @@ export function LocationSection() {
       <p>{invitation.wedding.address}</p>
       <p>{invitation.wedding.hallDetail}</p>
 
-    <div className="map-buttons">
-      <button className="kakao" onClick={() => open(invitation.links.kakaoMap)}>
-        <img src={`${import.meta.env.BASE_URL}images/icon-kakao-map.png`} alt="" />
-        <span>카카오맵</span>
-      </button>
-    
-      <button className="naver" onClick={() => open(invitation.links.naverMap)}>
-        <img src={`${import.meta.env.BASE_URL}images/icon-naver-map.png`} alt="" />
-        <span>네이버지도</span>
-      </button>
-    
-      <button className="google" onClick={() => open(invitation.links.googleMap)}>
-        <img src={`${import.meta.env.BASE_URL}images/icon-google-map.png`} alt="" />
-        <span>구글맵</span>
-      </button>
-    </div>
+<div className="map-buttons">
+  <button
+    className="map-button kakao"
+    onClick={() => open(invitation.links.kakaoMap)}
+  >
+    <img
+      className="map-logo"
+      src={`${import.meta.env.BASE_URL}images/icon-kakao-map.png`}
+      alt=""
+    />
+    <span>카카오맵</span>
+  </button>
 
-      <div className="transport-list">
-        <Transport icon={<Train size={20} />} title="지하철" items={invitation.transport.subway} />
-        <Transport icon={<Bus size={20} />} title="버스" items={invitation.transport.bus} />
-        <Transport icon={<Car size={20} />} title="주차" items={invitation.transport.parking} />
-      </div>
+  <button
+    className="map-button naver"
+    onClick={() => open(invitation.links.naverMap)}
+  >
+    <img
+      className="map-logo"
+      src={`${import.meta.env.BASE_URL}images/icon-naver-map.png`}
+      alt=""
+    />
+    <span>네이버지도</span>
+  </button>
+
+  <button
+    className="map-button google"
+    onClick={() => open(invitation.links.googleMap)}
+  >
+    <img
+      className="map-logo"
+      src={`${import.meta.env.BASE_URL}images/icon-google-map.png`}
+      alt=""
+    />
+    <span>구글맵</span>
+  </button>
+</div>
     </section>
   );
 }
