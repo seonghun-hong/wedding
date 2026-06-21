@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
 
 type Comment = {
@@ -7,6 +7,8 @@ type Comment = {
   message: string;
   created_at: string;
 };
+
+const PAGE_SIZE = 5;
 
 async function createPasswordHash(password: string) {
   const encoder = new TextEncoder();
@@ -17,24 +19,57 @@ async function createPasswordHash(password: string) {
   return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function formatCreatedAt(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export function GuestbookSection() {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const loadComments = async () => {
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [listLoading, setListLoading] = useState(false);
+
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  }, [totalCount]);
+
+  const loadComments = async (targetPage = page) => {
     if (!hasSupabaseConfig) {
       return;
     }
 
-    const { data, error } = await supabase
+    setListLoading(true);
+
+    const from = (targetPage - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error, count } = await supabase
       .from("comments")
-      .select("id, name, message, created_at")
+      .select("id, name, message, created_at", { count: "exact" })
       .eq("visible", true)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .range(from, to);
+
+    setListLoading(false);
 
     if (error) {
       console.error("방명록 불러오기 실패:", error);
@@ -42,6 +77,7 @@ export function GuestbookSection() {
     }
 
     setComments(data || []);
+    setTotalCount(count || 0);
   };
 
   const submit = async () => {
@@ -96,7 +132,10 @@ export function GuestbookSection() {
     setName("");
     setMessage("");
     setPassword("");
-    await loadComments();
+
+    setPage(1);
+    await loadComments(1);
+
     alert("축하 메시지가 등록되었습니다.");
   };
 
@@ -130,12 +169,28 @@ export function GuestbookSection() {
       return;
     }
 
+    const nextTotalCount = Math.max(totalCount - 1, 0);
+    const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / PAGE_SIZE));
+    const nextPage = Math.min(page, nextTotalPages);
+
+    setPage(nextPage);
+    await loadComments(nextPage);
+
     alert("댓글이 삭제되었습니다.");
-    await loadComments();
+  };
+
+  const movePage = async (nextPage: number) => {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) {
+      return;
+    }
+
+    setPage(nextPage);
+    await loadComments(nextPage);
   };
 
   useEffect(() => {
-    loadComments();
+    loadComments(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -146,39 +201,39 @@ export function GuestbookSection() {
         신랑 신부에게 따뜻한 축하 메시지를 남겨주세요.
       </p>
 
-  <div className="message-form">
-  <div className="guestbook-input-row">
-    <input
-      value={name}
-      maxLength={20}
-      onChange={(e) => setName(e.target.value)}
-      placeholder="이름"
-    />
+      <div className="message-form">
+        <div className="guestbook-input-row">
+          <input
+            value={name}
+            maxLength={20}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="이름"
+          />
 
-    <input
-      value={password}
-      maxLength={20}
-      type="password"
-      onChange={(e) => setPassword(e.target.value)}
-      placeholder="비밀번호"
-    />
-  </div>
+          <input
+            value={password}
+            maxLength={20}
+            type="password"
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="삭제 비밀번호"
+          />
+        </div>
 
-  <textarea
-    value={message}
-    maxLength={300}
-    onChange={(e) => setMessage(e.target.value)}
-    placeholder="축하 메시지를 남겨주세요."
-  />
+        <textarea
+          value={message}
+          maxLength={300}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="축하 메시지를 남겨주세요."
+        />
 
-  <p className="password-guide">
-    비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
-  </p>
+        <p className="password-guide">
+          비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
+        </p>
 
-  <button className="primary-button" onClick={submit} disabled={loading}>
-    {loading ? "등록 중..." : "등록하기"}
-  </button>
-</div>
+        <button className="primary-button" onClick={submit} disabled={loading}>
+          {loading ? "등록 중..." : "등록하기"}
+        </button>
+      </div>
 
       {!hasSupabaseConfig && (
         <p className="guestbook-warning">
@@ -187,13 +242,21 @@ export function GuestbookSection() {
       )}
 
       <div className="message-list">
-        {comments.length === 0 ? (
+        {listLoading ? (
+          <p className="empty-message">메시지를 불러오는 중입니다.</p>
+        ) : comments.length === 0 ? (
           <p className="empty-message">아직 등록된 메시지가 없습니다.</p>
         ) : (
           comments.map((comment) => (
             <div className="message-card" key={comment.id}>
               <div className="message-card-header">
-                <b>{comment.name}</b>
+                <div>
+                  <b>{comment.name}</b>
+                  <span className="message-time">
+                    {formatCreatedAt(comment.created_at)}
+                  </span>
+                </div>
+
                 <button
                   className="message-delete-button"
                   onClick={() => removeComment(comment.id)}
@@ -207,6 +270,40 @@ export function GuestbookSection() {
           ))
         )}
       </div>
+
+      {totalCount > PAGE_SIZE && (
+        <div className="pagination">
+          <button
+            className="pagination-arrow"
+            onClick={() => movePage(page - 1)}
+            disabled={page === 1}
+          >
+            이전
+          </button>
+
+          <div className="pagination-numbers">
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+              (pageNumber) => (
+                <button
+                  key={pageNumber}
+                  className={pageNumber === page ? "active" : ""}
+                  onClick={() => movePage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              )
+            )}
+          </div>
+
+          <button
+            className="pagination-arrow"
+            onClick={() => movePage(page + 1)}
+            disabled={page === totalPages}
+          >
+            다음
+          </button>
+        </div>
+      )}
     </section>
   );
 }
