@@ -3,12 +3,16 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { asset } from "../lib/path";
 
+type SlideDirection = "left" | "right" | null;
+
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
 
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
+  const animatingRef = useRef(false);
 
   const images = showAll ? invitation.gallery : invitation.gallery.slice(0, 9);
 
@@ -17,9 +21,10 @@ export function GallerySection() {
 
   const closeModal = () => {
     setSelectedIndex(null);
+    setSlideDirection(null);
   };
 
-  const showPrev = () => {
+  const moveToPrev = () => {
     setSelectedIndex((prev) => {
       if (prev === null) {
         return prev;
@@ -29,7 +34,7 @@ export function GallerySection() {
     });
   };
 
-  const showNext = () => {
+  const moveToNext = () => {
     setSelectedIndex((prev) => {
       if (prev === null) {
         return prev;
@@ -37,6 +42,36 @@ export function GallerySection() {
 
       return prev === invitation.gallery.length - 1 ? 0 : prev + 1;
     });
+  };
+
+  const slidePrev = () => {
+    if (animatingRef.current) {
+      return;
+    }
+
+    animatingRef.current = true;
+    setSlideDirection("right");
+
+    setTimeout(() => {
+      moveToPrev();
+      setSlideDirection(null);
+      animatingRef.current = false;
+    }, 180);
+  };
+
+  const slideNext = () => {
+    if (animatingRef.current) {
+      return;
+    }
+
+    animatingRef.current = true;
+    setSlideDirection("left");
+
+    setTimeout(() => {
+      moveToNext();
+      setSlideDirection(null);
+      animatingRef.current = false;
+    }, 180);
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -71,9 +106,9 @@ export function GallerySection() {
     }
 
     if (diffX > 0) {
-      showPrev();
+      slidePrev();
     } else {
-      showNext();
+      slideNext();
     }
   };
 
@@ -88,11 +123,11 @@ export function GallerySection() {
       }
 
       if (event.key === "ArrowLeft") {
-        showPrev();
+        slidePrev();
       }
 
       if (event.key === "ArrowRight") {
-        showNext();
+        slideNext();
       }
     };
 
@@ -168,26 +203,36 @@ export function GallerySection() {
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              showPrev();
+              slidePrev();
             }}
             aria-label="이전 사진"
           >
             <ChevronLeft size={34} />
           </button>
 
-          <img
-            className="gallery-modal-image"
-            src={asset(selectedImage)}
-            alt={`확대 사진 ${selectedIndex + 1}`}
+          <div
+            className={`gallery-modal-image-wrap ${
+              slideDirection === "left"
+                ? "slide-left"
+                : slideDirection === "right"
+                  ? "slide-right"
+                  : ""
+            }`}
             onClick={(event) => event.stopPropagation()}
-          />
+          >
+            <img
+              className="gallery-modal-image"
+              src={asset(selectedImage)}
+              alt={`확대 사진 ${selectedIndex + 1}`}
+            />
+          </div>
 
           <button
             className="gallery-slide-button gallery-slide-next"
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              showNext();
+              slideNext();
             }}
             aria-label="다음 사진"
           >
