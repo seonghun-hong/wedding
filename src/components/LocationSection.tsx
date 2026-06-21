@@ -17,17 +17,22 @@ export function LocationSection() {
       <p>{invitation.wedding.address}</p>
       <p>{invitation.wedding.hallDetail}</p>
 
-      <div className="map-buttons">
-        <button className="map-btn kakao-btn" type="button" onClick={() => open(invitation.links.kakaoMap)}>
-          <MapPin size={17} /> 카카오맵
-        </button>
-        <button className="map-btn naver-btn" type="button" onClick={() => open(invitation.links.naverMap)}>
-          네이버지도
-        </button>
-        <button className="map-btn google-btn" type="button" onClick={() => open(invitation.links.googleMap)}>
-          구글맵
-        </button>
-      </div>
+    <div className="map-buttons">
+      <button className="kakao" onClick={() => open(invitation.links.kakaoMap)}>
+        <img src={`${import.meta.env.BASE_URL}images/icon-kakao-map.png`} alt="" />
+        <span>카카오맵</span>
+      </button>
+    
+      <button className="naver" onClick={() => open(invitation.links.naverMap)}>
+        <img src={`${import.meta.env.BASE_URL}images/icon-naver-map.png`} alt="" />
+        <span>네이버지도</span>
+      </button>
+    
+      <button className="google" onClick={() => open(invitation.links.googleMap)}>
+        <img src={`${import.meta.env.BASE_URL}images/icon-google-map.png`} alt="" />
+        <span>구글맵</span>
+      </button>
+    </div>
 
       <div className="transport-list">
         <Transport icon={<Train size={20} />} title="지하철" items={invitation.transport.subway} />
