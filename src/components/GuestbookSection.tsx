@@ -8,10 +8,20 @@ type Comment = {
   created_at: string;
 };
 
+async function createPasswordHash(password: string) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+  return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function GuestbookSection() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const loadComments = async () => {
@@ -37,6 +47,7 @@ export function GuestbookSection() {
   const submit = async () => {
     const trimmedName = name.trim();
     const trimmedMessage = message.trim();
+    const trimmedPassword = password.trim();
 
     if (!trimmedName) {
       alert("이름을 입력해주세요.");
@@ -48,6 +59,16 @@ export function GuestbookSection() {
       return;
     }
 
+    if (!trimmedPassword) {
+      alert("삭제할 때 사용할 비밀번호를 입력해주세요.");
+      return;
+    }
+
+    if (trimmedPassword.length < 4) {
+      alert("비밀번호는 4자리 이상 입력해주세요.");
+      return;
+    }
+
     if (!hasSupabaseConfig) {
       alert("Supabase 연결 정보가 아직 설정되지 않았습니다.");
       return;
@@ -55,9 +76,12 @@ export function GuestbookSection() {
 
     setLoading(true);
 
+    const passwordHash = await createPasswordHash(trimmedPassword);
+
     const { error } = await supabase.from("comments").insert({
       name: trimmedName,
       message: trimmedMessage,
+      password_hash: passwordHash,
       visible: true,
     });
 
@@ -71,8 +95,43 @@ export function GuestbookSection() {
 
     setName("");
     setMessage("");
+    setPassword("");
     await loadComments();
     alert("축하 메시지가 등록되었습니다.");
+  };
+
+  const removeComment = async (commentId: string) => {
+    const inputPassword = window.prompt("댓글 작성 시 입력한 비밀번호를 입력해주세요.");
+
+    if (!inputPassword) {
+      return;
+    }
+
+    if (!hasSupabaseConfig) {
+      alert("Supabase 연결 정보가 아직 설정되지 않았습니다.");
+      return;
+    }
+
+    const passwordHash = await createPasswordHash(inputPassword.trim());
+
+    const { data, error } = await supabase.rpc("hide_comment_by_password", {
+      p_id: commentId,
+      p_password_hash: passwordHash,
+    });
+
+    if (error) {
+      console.error("댓글 삭제 실패:", error);
+      alert("댓글 삭제 중 오류가 발생했습니다.");
+      return;
+    }
+
+    if (!data) {
+      alert("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+
+    alert("댓글이 삭제되었습니다.");
+    await loadComments();
   };
 
   useEffect(() => {
@@ -102,6 +161,18 @@ export function GuestbookSection() {
           placeholder="축하 메시지를 남겨주세요."
         />
 
+        <input
+          value={password}
+          maxLength={20}
+          type="password"
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="삭제용 비밀번호"
+        />
+
+        <p className="password-guide">
+          비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
+        </p>
+
         <button className="primary-button" onClick={submit} disabled={loading}>
           {loading ? "등록 중..." : "등록하기"}
         </button>
@@ -119,7 +190,16 @@ export function GuestbookSection() {
         ) : (
           comments.map((comment) => (
             <div className="message-card" key={comment.id}>
-              <b>{comment.name}</b>
+              <div className="message-card-header">
+                <b>{comment.name}</b>
+                <button
+                  className="message-delete-button"
+                  onClick={() => removeComment(comment.id)}
+                >
+                  삭제
+                </button>
+              </div>
+
               <p>{comment.message}</p>
             </div>
           ))
