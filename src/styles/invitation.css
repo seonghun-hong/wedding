@@ -2003,30 +2003,3 @@ img { display: block; }
     transform: translate(-50%, 0);
   }
 }
-
-.footer-toast {
-  margin: 18px auto 0;
-  padding: 10px 16px;
-  width: fit-content;
-  max-width: calc(100% - 40px);
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #40556f;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  text-align: center;
-  animation: footerToastFade 0.18s ease;
-}
-
-@keyframes footerToastFade {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
