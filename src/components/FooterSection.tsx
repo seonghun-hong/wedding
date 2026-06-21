@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarDays, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { downloadCalendar } from "../lib/calendar";
+import { copyText } from "../lib/clipboard";
 
 declare global {
   interface Window {
@@ -15,56 +16,26 @@ const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og.jpg";
 export function FooterSection() {
   const [toast, setToast] = useState("");
 
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setToast("");
-    }, 1800);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [toast]);
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 1500);
+  };
 
   const copyLink = async () => {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(WEDDING_URL);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = WEDDING_URL;
-        textarea.setAttribute("readonly", "");
-        textarea.style.position = "fixed";
-        textarea.style.left = "-9999px";
-        textarea.style.top = "0";
-
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-
-      setToast("링크가 복사되었습니다.");
-    } catch (error) {
-      console.error("링크 복사 실패:", error);
-      setToast("링크 복사에 실패했습니다.");
-    }
+    await copyText(WEDDING_URL);
+    showToast("링크가 복사되었습니다.");
   };
 
   const kakaoShare = () => {
     if (!window.Kakao) {
-      setToast("카카오 SDK를 불러오지 못했습니다.");
+      showToast("카카오 SDK를 불러오지 못했습니다.");
       return;
     }
 
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
 
     if (!kakaoKey) {
-      setToast("카카오 키가 설정되지 않았습니다.");
+      showToast("카카오 키가 설정되지 않았습니다.");
       return;
     }
 
@@ -95,9 +66,9 @@ export function FooterSection() {
     });
   };
 
-  const handleCalendarDownload = () => {
+  const saveCalendar = () => {
     downloadCalendar();
-    setToast("캘린더가 저장되었습니다.");
+    showToast("캘린더가 저장되었습니다.");
   };
 
   return (
@@ -120,14 +91,14 @@ export function FooterSection() {
         <button
           className="footer-btn calendar-share"
           type="button"
-          onClick={handleCalendarDownload}
+          onClick={saveCalendar}
         >
           <CalendarDays size={28} />
           <span>캘린더</span>
         </button>
       </div>
 
-      {toast && <p className="footer-toast">{toast}</p>}
+      {toast && <div className="toast">{toast}</div>}
 
       <p>
         © {invitation.wedding.year} by{" "}
