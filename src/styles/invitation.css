@@ -607,6 +607,37 @@ img { display: block; }
   color: #9aa1ad;
   font-size: 15px;
 }
+.password-guide {
+  margin: -2px 0 8px;
+  color: #9aa1ad;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.message-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.message-card-header b {
+  margin-bottom: 0;
+}
+
+.message-delete-button {
+  border: none;
+  background: transparent;
+  color: #9aa1ad;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0 4px 12px;
+}
+
+.message-delete-button:hover {
+  color: #111827;
+}
 
 @media (max-width: 380px) {
   .section { padding-left: 18px; padding-right: 18px; }
