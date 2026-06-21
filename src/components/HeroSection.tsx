@@ -36,9 +36,6 @@ export function HeroSection() {
         <span>{muted ? "음소거 해제" : "음소거"}</span>
       </button>
 
-      <div className="hero-hand hero-you">You</div>
-      <div className="hero-hand hero-me">Me</div>
-      <div className="hero-hand hero-we">We are</div>
     </section>
   );
 }
