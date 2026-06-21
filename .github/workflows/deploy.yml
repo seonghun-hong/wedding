@@ -1,4 +1,4 @@
-﻿name: Deploy Wedding Invitation
+name: Deploy Wedding Invitation
 
 on:
   push:
