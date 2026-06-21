@@ -23,7 +23,7 @@ export const invitation = {
     name: "지연",
     fullName: "안지연",
     phone: "010-9822-2382",
-    father: "안복균",
+    father: "故 안복균",
     mother: "이복순",
     accounts: [
       { name: "안지연", bank: "토스뱅크", account: "1000-2724-7445", holder: "안지연" },
