@@ -2,7 +2,6 @@ import { CalendarDays, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { downloadCalendar } from "../lib/calendar";
 import { copyText } from "../lib/clipboard";
-import { asset } from "../lib/path";
 
 declare global {
   interface Window {
@@ -10,9 +9,12 @@ declare global {
   }
 }
 
+const WEDDING_URL = "https://seonghun-hong.github.io/wedding/";
+const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og.jpg";
+
 export function FooterSection() {
   const copyLink = async () => {
-    await copyText(window.location.href);
+    await copyText(WEDDING_URL);
     alert("링크가 복사되었습니다.");
   };
 
@@ -23,6 +25,7 @@ export function FooterSection() {
     }
 
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
+
     if (!kakaoKey) {
       alert("VITE_KAKAO_JS_KEY를 설정해주세요.");
       return;
@@ -37,18 +40,18 @@ export function FooterSection() {
       content: {
         title: `${invitation.groom.name} ♥ ${invitation.bride.name} 결혼합니다`,
         description: `${invitation.wedding.displayDate}\n${invitation.wedding.hallName}`,
-        imageUrl: `${window.location.origin}${asset("/images/og.jpg")}`,
+        imageUrl: KAKAO_IMAGE_URL,
         link: {
-          mobileWebUrl: window.location.href,
-          webUrl: window.location.href,
+          mobileWebUrl: WEDDING_URL,
+          webUrl: WEDDING_URL,
         },
       },
       buttons: [
         {
           title: "청첩장 보기",
           link: {
-            mobileWebUrl: window.location.href,
-            webUrl: window.location.href,
+            mobileWebUrl: WEDDING_URL,
+            webUrl: WEDDING_URL,
           },
         },
       ],
@@ -58,20 +61,35 @@ export function FooterSection() {
   return (
     <footer className="footer-section">
       <div className="footer-buttons">
-        <button className="footer-btn kakao-share" type="button" onClick={kakaoShare}>
+        <button
+          className="footer-btn kakao-share"
+          type="button"
+          onClick={kakaoShare}
+        >
           <Share2 size={28} />
           <span>카카오톡</span>
         </button>
+
         <button className="footer-btn" type="button" onClick={copyLink}>
           <Copy size={28} />
           <span>링크복사</span>
         </button>
-        <button className="footer-btn calendar-share" type="button" onClick={downloadCalendar}>
+
+        <button
+          className="footer-btn calendar-share"
+          type="button"
+          onClick={downloadCalendar}
+        >
           <CalendarDays size={28} />
           <span>캘린더</span>
         </button>
       </div>
-      <p>© {invitation.wedding.year} by {invitation.groom.name.toLowerCase()} & {invitation.bride.name.toLowerCase()}.</p>
+
+      <p>
+        © {invitation.wedding.year} by{" "}
+        {invitation.groom.name.toLowerCase()} &{" "}
+        {invitation.bride.name.toLowerCase()}.
+      </p>
     </footer>
   );
 }
