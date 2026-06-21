@@ -433,7 +433,7 @@ img { display: block; }
 }
 
 /* GUESTBOOK */
-.guestbook-section { padding: 58px 0px; }
+.guestbook-section { padding: 58px 18px; }
 .korean-title {
   margin: 0 0 38px;
   color: #07101f;
