@@ -34,9 +34,6 @@ export function IntroSection() {
         </p>
       </div>
 
-      <button className="primary-button" type="button" onClick={() => call(invitation.groom.phone)}>
-        연락하기
-      </button>
     </section>
   );
 }
