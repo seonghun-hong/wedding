@@ -1,26 +1,30 @@
-import { TouchEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { asset } from "../lib/path";
 
-type SlideTarget = "prev" | "next" | "center";
+type SlideTarget = "prev" | "next" | "center" | null;
 
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-
   const [dragOffset, setDragOffset] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const latestDragOffsetRef = useRef(0);
-  const animatingRef = useRef(false);
+  const selectedIndexRef = useRef<number | null>(null);
+  const startXRef = useRef<number | null>(null);
+  const startYRef = useRef<number | null>(null);
+  const latestOffsetRef = useRef(0);
+  const pendingTargetRef = useRef<SlideTarget>(null);
+  const pointerIdRef = useRef<number | null>(null);
 
   const gallery = invitation.gallery;
   const images = showAll ? gallery : gallery.slice(0, 9);
   const totalCount = gallery.length;
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
   const getPrevIndex = (index: number) => {
     return index === 0 ? totalCount - 1 : index - 1;
@@ -30,86 +34,46 @@ export function GallerySection() {
     return index === totalCount - 1 ? 0 : index + 1;
   };
 
-  const resetDrag = () => {
+  const openModal = (index: number) => {
+    selectedIndexRef.current = index;
+    setSelectedIndex(index);
     setDragOffset(0);
-    latestDragOffsetRef.current = 0;
-    setIsDragging(false);
+    latestOffsetRef.current = 0;
     setIsAnimating(false);
-    animatingRef.current = false;
+    pendingTargetRef.current = null;
   };
 
   const closeModal = () => {
+    selectedIndexRef.current = null;
     setSelectedIndex(null);
-    resetDrag();
+    setDragOffset(0);
+    latestOffsetRef.current = 0;
+    setIsAnimating(false);
+    pendingTargetRef.current = null;
   };
 
-  const openModal = (index: number) => {
-    setSelectedIndex(index);
-    resetDrag();
-  };
+  const finishSlide = (target: Exclude<SlideTarget, null>) => {
+    const currentIndex = selectedIndexRef.current;
 
-  const finishSlide = (target: SlideTarget) => {
-    if (selectedIndex === null || animatingRef.current) {
+    if (currentIndex === null || isAnimating) {
       return;
     }
 
-    animatingRef.current = true;
-    setIsDragging(false);
-    setIsAnimating(true);
-
-    const viewportWidth = window.innerWidth;
+    const width = window.innerWidth;
+    let finalOffset = 0;
 
     if (target === "next") {
-      setDragOffset(-viewportWidth);
-      latestDragOffsetRef.current = -viewportWidth;
-
-      window.setTimeout(() => {
-        setSelectedIndex((prev) => {
-          if (prev === null) {
-            return prev;
-          }
-
-          return getNextIndex(prev);
-        });
-
-        setDragOffset(0);
-        latestDragOffsetRef.current = 0;
-        setIsAnimating(false);
-        animatingRef.current = false;
-      }, 260);
-
-      return;
+      finalOffset = -width;
     }
 
     if (target === "prev") {
-      setDragOffset(viewportWidth);
-      latestDragOffsetRef.current = viewportWidth;
-
-      window.setTimeout(() => {
-        setSelectedIndex((prev) => {
-          if (prev === null) {
-            return prev;
-          }
-
-          return getPrevIndex(prev);
-        });
-
-        setDragOffset(0);
-        latestDragOffsetRef.current = 0;
-        setIsAnimating(false);
-        animatingRef.current = false;
-      }, 260);
-
-      return;
+      finalOffset = width;
     }
 
-    setDragOffset(0);
-    latestDragOffsetRef.current = 0;
-
-    window.setTimeout(() => {
-      setIsAnimating(false);
-      animatingRef.current = false;
-    }, 220);
+    pendingTargetRef.current = target;
+    setIsAnimating(true);
+    setDragOffset(finalOffset);
+    latestOffsetRef.current = finalOffset;
   };
 
   const slidePrev = () => {
@@ -120,32 +84,64 @@ export function GallerySection() {
     finishSlide("next");
   };
 
-  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
-    if (animatingRef.current) {
+  const handleTransitionEnd = () => {
+    const currentIndex = selectedIndexRef.current;
+    const target = pendingTargetRef.current;
+
+    if (currentIndex === null || !target) {
       return;
     }
 
-    const touch = event.touches[0];
+    let nextSelectedIndex = currentIndex;
 
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    setIsDragging(true);
+    if (target === "next") {
+      nextSelectedIndex = getNextIndex(currentIndex);
+    }
+
+    if (target === "prev") {
+      nextSelectedIndex = getPrevIndex(currentIndex);
+    }
+
+    /*
+      중요:
+      여기서 isAnimating을 먼저 false로 바꾸고,
+      selectedIndex와 dragOffset을 같은 렌더에서 리셋해야
+      중앙 복귀가 애니메이션 없이 즉시 처리됩니다.
+    */
+    pendingTargetRef.current = null;
+    selectedIndexRef.current = nextSelectedIndex;
+    latestOffsetRef.current = 0;
+
     setIsAnimating(false);
+    setSelectedIndex(nextSelectedIndex);
+    setDragOffset(0);
   };
 
-  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (isAnimating) {
+      return;
+    }
+
+    pointerIdRef.current = event.pointerId;
+    startXRef.current = event.clientX;
+    startYRef.current = event.clientY;
+    latestOffsetRef.current = 0;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (
-      touchStartXRef.current === null ||
-      touchStartYRef.current === null ||
-      animatingRef.current
+      pointerIdRef.current !== event.pointerId ||
+      startXRef.current === null ||
+      startYRef.current === null ||
+      isAnimating
     ) {
       return;
     }
 
-    const touch = event.touches[0];
-
-    const diffX = touch.clientX - touchStartXRef.current;
-    const diffY = touch.clientY - touchStartYRef.current;
+    const diffX = event.clientX - startXRef.current;
+    const diffY = event.clientY - startYRef.current;
 
     const isHorizontalMove = Math.abs(diffX) > Math.abs(diffY);
 
@@ -156,29 +152,34 @@ export function GallerySection() {
     event.preventDefault();
 
     setDragOffset(diffX);
-    latestDragOffsetRef.current = diffX;
+    latestOffsetRef.current = diffX;
   };
 
-  const handleTouchEnd = () => {
-    if (touchStartXRef.current === null || touchStartYRef.current === null) {
-      setIsDragging(false);
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
       return;
     }
 
-    const diffX = latestDragOffsetRef.current;
+    pointerIdRef.current = null;
+    startXRef.current = null;
+    startYRef.current = null;
 
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
+    const width = window.innerWidth;
+    const threshold = Math.min(110, width * 0.25);
+    const offset = latestOffsetRef.current;
 
-    const viewportWidth = window.innerWidth;
-    const swipeThreshold = Math.min(110, viewportWidth * 0.25);
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // 이미 release 된 경우 무시
+    }
 
-    if (diffX <= -swipeThreshold) {
+    if (offset <= -threshold) {
       finishSlide("next");
       return;
     }
 
-    if (diffX >= swipeThreshold) {
+    if (offset >= threshold) {
       finishSlide("prev");
       return;
     }
@@ -186,9 +187,15 @@ export function GallerySection() {
     finishSlide("center");
   };
 
-  const handleTouchCancel = () => {
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    pointerIdRef.current = null;
+    startXRef.current = null;
+    startYRef.current = null;
+
     finishSlide("center");
   };
 
@@ -216,7 +223,7 @@ export function GallerySection() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIndex]);
+  }, [selectedIndex, isAnimating]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -233,13 +240,6 @@ export function GallerySection() {
 
   const prevIndex = selectedIndex !== null ? getPrevIndex(selectedIndex) : null;
   const nextIndex = selectedIndex !== null ? getNextIndex(selectedIndex) : null;
-
-  const trackStyle =
-    selectedIndex !== null
-      ? {
-          transform: `translate3d(calc(-100vw + ${dragOffset}px), 0, 0)`,
-        }
-      : undefined;
 
   return (
     <section className="section gallery-section">
@@ -274,7 +274,7 @@ export function GallerySection() {
 
       {selectedIndex !== null && prevIndex !== null && nextIndex !== null && (
         <div
-          className="image-modal gallery-modal-fixed"
+          className="image-modal photo-viewer-modal"
           onClick={closeModal}
           role="presentation"
         >
@@ -295,40 +295,41 @@ export function GallerySection() {
           </button>
 
           <div
-            className="gallery-slider-window"
+            className="photo-viewer-window"
             onClick={(event) => event.stopPropagation()}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onTouchCancel={handleTouchCancel}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerCancel}
           >
             <div
-              className={`gallery-slider-track ${
-                isDragging ? "dragging" : ""
-              } ${isAnimating ? "animating" : ""}`}
-              style={trackStyle}
+              className="photo-viewer-track"
+              onTransitionEnd={handleTransitionEnd}
+              style={{
+                transform: `translate3d(calc(-100vw + ${dragOffset}px), 0, 0)`,
+                transition: isAnimating
+                  ? "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)"
+                  : "none",
+              }}
             >
-              <div className="gallery-slider-panel">
+              <div className="photo-viewer-panel">
                 <img
-                  className="gallery-modal-image"
                   src={asset(gallery[prevIndex])}
                   alt={`이전 사진 ${prevIndex + 1}`}
                   draggable={false}
                 />
               </div>
 
-              <div className="gallery-slider-panel">
+              <div className="photo-viewer-panel">
                 <img
-                  className="gallery-modal-image"
                   src={asset(gallery[selectedIndex])}
                   alt={`확대 사진 ${selectedIndex + 1}`}
                   draggable={false}
                 />
               </div>
 
-              <div className="gallery-slider-panel">
+              <div className="photo-viewer-panel">
                 <img
-                  className="gallery-modal-image"
                   src={asset(gallery[nextIndex])}
                   alt={`다음 사진 ${nextIndex + 1}`}
                   draggable={false}
