@@ -20,7 +20,7 @@ const WEDDING_LNG = 127.0693185;
 
 // 숫자가 작을수록 확대됩니다.
 // 1: 약 30m 느낌 / 2: 조금 넓게 / 3: 기본
-const INITIAL_MAP_LEVEL = 1;
+const INITIAL_MAP_LEVEL = 4;
 
 function loadKakaoMapSdk(appKey: string) {
   return new Promise<void>((resolve, reject) => {
@@ -94,22 +94,6 @@ export function LocationSection() {
         });
 
         marker.setMap(map);
-
-        const infoWindow = new window.kakao.maps.InfoWindow({
-          content: `
-            <div style="
-              padding:8px 12px;
-              font-size:13px;
-              color:#1f2937;
-              white-space:nowrap;
-              text-align:center;
-            ">
-              ${WEDDING_PLACE_NAME}
-            </div>
-          `,
-        });
-
-        infoWindow.open(map, marker);
 
         setTimeout(() => {
           map.relayout();
