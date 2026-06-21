@@ -864,6 +864,63 @@ img { display: block; }
 .upload-submit-button:disabled {
   opacity: 0.6;
 }
+.selected-file-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.selected-file-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f7f8fa;
+  text-align: left;
+}
+
+.selected-file-item strong {
+  display: block;
+  max-width: 230px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-file-item span {
+  display: block;
+  margin-top: 3px;
+  color: #9aa1ad;
+  font-size: 12px;
+}
+
+.upload-status {
+  flex-shrink: 0;
+  font-style: normal;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.upload-status.waiting {
+  color: #9aa1ad;
+}
+
+.upload-status.uploading {
+  color: #2563eb;
+}
+
+.upload-status.success {
+  color: #16a34a;
+}
+
+.upload-status.error {
+  color: #dc2626;
+}
 
 @media (max-width: 360px) {
   .guestbook-input-row {
