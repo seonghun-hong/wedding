@@ -13,36 +13,21 @@ const WEDDING_URL = "https://seonghun-hong.github.io/wedding/";
 const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og.jpg";
 
 export function FooterSection() {
-  const [copied, setCopied] = useState(false);
-  const [calendarSaved, setCalendarSaved] = useState(false);
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
-    if (!copied) {
+    if (!toast) {
       return;
     }
 
     const timer = window.setTimeout(() => {
-      setCopied(false);
-    }, 1600);
+      setToast("");
+    }, 1800);
 
     return () => {
       window.clearTimeout(timer);
     };
-  }, [copied]);
-
-  useEffect(() => {
-    if (!calendarSaved) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setCalendarSaved(false);
-    }, 1600);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [calendarSaved]);
+  }, [toast]);
 
   const copyLink = async () => {
     try {
@@ -63,23 +48,23 @@ export function FooterSection() {
         document.body.removeChild(textarea);
       }
 
-      setCopied(true);
+      setToast("링크가 복사되었습니다.");
     } catch (error) {
       console.error("링크 복사 실패:", error);
-      setCopied(false);
+      setToast("링크 복사에 실패했습니다.");
     }
   };
 
   const kakaoShare = () => {
     if (!window.Kakao) {
-      console.warn("카카오 SDK를 불러오지 못했습니다.");
+      setToast("카카오 SDK를 불러오지 못했습니다.");
       return;
     }
 
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
 
     if (!kakaoKey) {
-      console.warn("VITE_KAKAO_JS_KEY가 설정되지 않았습니다.");
+      setToast("카카오 키가 설정되지 않았습니다.");
       return;
     }
 
@@ -112,7 +97,7 @@ export function FooterSection() {
 
   const handleCalendarDownload = () => {
     downloadCalendar();
-    setCalendarSaved(true);
+    setToast("캘린더가 저장되었습니다.");
   };
 
   return (
@@ -129,7 +114,7 @@ export function FooterSection() {
 
         <button className="footer-btn" type="button" onClick={copyLink}>
           <Copy size={28} />
-          <span>{copied ? "복사완료" : "링크복사"}</span>
+          <span>링크복사</span>
         </button>
 
         <button
@@ -138,9 +123,11 @@ export function FooterSection() {
           onClick={handleCalendarDownload}
         >
           <CalendarDays size={28} />
-          <span>{calendarSaved ? "저장완료" : "캘린더"}</span>
+          <span>캘린더</span>
         </button>
       </div>
+
+      {toast && <p className="footer-toast">{toast}</p>}
 
       <p>
         © {invitation.wedding.year} by{" "}
