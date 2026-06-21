@@ -69,9 +69,9 @@ export const invitation = {
   ],
 
   links: {
-    kakaoMap: "https://map.kakao.com/?q=%EB%B9%8C%EB%9D%BC%EB%93%9C%EB%A7%88%EB%A5%B4%20%EC%9D%B4%EC%B2%9C",
-    naverMap: "https://map.naver.com/p/search/%EB%B9%8C%EB%9D%BC%EB%93%9C%EB%A7%88%EB%A5%B4%20%EC%9D%B4%EC%B2%9C",
-    googleMap: "https://www.google.com/maps/search/?api=1&query=%EB%B9%8C%EB%9D%BC%EB%93%9C%EB%A7%88%EB%A5%B4%20%EC%9D%B4%EC%B2%9C",
+    kakaoMap: "https://map.kakao.com/?map_type=TYPE_MAP&target=car&rt=%2C%2C515317%2C1121875&rt1=&rt2=%ED%95%98%EC%9A%B0%EC%8A%A4%EC%98%A4%EB%B8%8C%EB%8D%94%EB%9D%BC%EC%9B%80&rtIds=%2C435680876&rtTypes=%2CPLACE",
+    naverMap: "https://map.naver.com/p/directions/-/3zlvr5,2AKSjX,%ED%95%98%EC%9A%B0%EC%8A%A4%20%EC%98%A4%EB%B8%8C%20%EB%8D%94%20%EB%9D%BC%EC%9B%80,1769349736,PLACE_POI/-/car?c=14.00,0,0,0,dh",
+    googleMap: "https://maps.app.goo.gl/nCcowJ2LjdVqHMy16",
   },
 
   transport: {
