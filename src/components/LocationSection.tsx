@@ -10,12 +10,17 @@ declare global {
 
 const KAKAO_MAP_SCRIPT_ID = "kakao-map-sdk";
 
-const WEDDING_ADDRESS = "서울특별시 광진구 능동로 81, 지하1층 B106호";
+const WEDDING_PLACE_NAME = "하우스오브더라움";
+const WEDDING_ADDRESS = "서울특별시 광진구 능동로 81";
+const WEDDING_HALL = "벨루스홀";
 
-// 하우스오브더라움 / 더 라움 펜트하우스 인근 좌표
-// 실제 지도 검색 결과와 아주 약간 다르면 아래 lat/lng만 조정하면 됩니다.
+// 하우스오브더라움 좌표
 const WEDDING_LAT = 37.5382236;
 const WEDDING_LNG = 127.0693185;
+
+// 숫자가 작을수록 확대됩니다.
+// 1: 약 30m 느낌 / 2: 조금 넓게 / 3: 기본
+const INITIAL_MAP_LEVEL = 1;
 
 function loadKakaoMapSdk(appKey: string) {
   return new Promise<void>((resolve, reject) => {
@@ -30,9 +35,11 @@ function loadKakaoMapSdk(appKey: string) {
       existingScript.addEventListener("load", () => {
         window.kakao.maps.load(() => resolve());
       });
+
       existingScript.addEventListener("error", () => {
         reject(new Error("카카오맵 SDK 로드 실패"));
       });
+
       return;
     }
 
@@ -72,11 +79,14 @@ export function LocationSection() {
           return;
         }
 
-        const position = new window.kakao.maps.LatLng(WEDDING_LAT, WEDDING_LNG);
+        const position = new window.kakao.maps.LatLng(
+          WEDDING_LAT,
+          WEDDING_LNG
+        );
 
         const map = new window.kakao.maps.Map(mapRef.current, {
           center: position,
-          level: 4,
+          level: INITIAL_MAP_LEVEL,
         });
 
         const marker = new window.kakao.maps.Marker({
@@ -104,6 +114,7 @@ export function LocationSection() {
         setTimeout(() => {
           map.relayout();
           map.setCenter(position);
+          map.setLevel(INITIAL_MAP_LEVEL);
         }, 100);
       })
       .catch((error) => {
@@ -125,20 +136,14 @@ export function LocationSection() {
 
       <h2 className="section-title">오시는 길</h2>
 
-      <div className="location-card">
-        <div className="location-pin">
-          <MapPin size={28} />
-        </div>
-
-        <h3 className="location-place">{invitation.wedding.venueName}</h3>
-
-        <p className="location-hall">{invitation.wedding.hallName}</p>
-
-        <p className="location-address">{WEDDING_ADDRESS}</p>
-      </div>
-
       <div ref={mapRef} className="kakao-map-box">
         <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
+      </div>
+
+      <div className="location-text-box">
+        <h3 className="location-place">{WEDDING_PLACE_NAME}</h3>
+        <p className="location-address">{WEDDING_ADDRESS}</p>
+        <p className="location-hall">{WEDDING_HALL}</p>
       </div>
 
       <div className="map-buttons">
