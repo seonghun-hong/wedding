@@ -146,37 +146,39 @@ export function GuestbookSection() {
         신랑 신부에게 따뜻한 축하 메시지를 남겨주세요.
       </p>
 
-      <div className="message-form">
-        <input
-          value={name}
-          maxLength={20}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="이름"
-        />
+  <div className="message-form">
+  <div className="guestbook-input-row">
+    <input
+      value={name}
+      maxLength={20}
+      onChange={(e) => setName(e.target.value)}
+      placeholder="이름"
+    />
 
-        <textarea
-          value={message}
-          maxLength={300}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="축하 메시지를 남겨주세요."
-        />
+    <input
+      value={password}
+      maxLength={20}
+      type="password"
+      onChange={(e) => setPassword(e.target.value)}
+      placeholder="삭제 비밀번호"
+    />
+  </div>
 
-        <input
-          value={password}
-          maxLength={20}
-          type="password"
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="삭제용 비밀번호"
-        />
+  <textarea
+    value={message}
+    maxLength={300}
+    onChange={(e) => setMessage(e.target.value)}
+    placeholder="축하 메시지를 남겨주세요."
+  />
 
-        <p className="password-guide">
-          비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
-        </p>
+  <p className="password-guide">
+    비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
+  </p>
 
-        <button className="primary-button" onClick={submit} disabled={loading}>
-          {loading ? "등록 중..." : "등록하기"}
-        </button>
-      </div>
+  <button className="primary-button" onClick={submit} disabled={loading}>
+    {loading ? "등록 중..." : "등록하기"}
+  </button>
+</div>
 
       {!hasSupabaseConfig && (
         <p className="guestbook-warning">
