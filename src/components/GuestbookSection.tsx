@@ -15,7 +15,9 @@ export function GuestbookSection() {
   const [loading, setLoading] = useState(false);
 
   const loadComments = async () => {
-    if (!hasSupabaseConfig) return;
+    if (!hasSupabaseConfig) {
+      return;
+    }
 
     const { data, error } = await supabase
       .from("comments")
@@ -25,7 +27,7 @@ export function GuestbookSection() {
       .limit(30);
 
     if (error) {
-      console.error(error);
+      console.error("방명록 불러오기 실패:", error);
       return;
     }
 
@@ -47,7 +49,7 @@ export function GuestbookSection() {
     }
 
     if (!hasSupabaseConfig) {
-      alert("방명록 저장소가 아직 연결되지 않았습니다.");
+      alert("Supabase 연결 정보가 아직 설정되지 않았습니다.");
       return;
     }
 
@@ -62,7 +64,7 @@ export function GuestbookSection() {
     setLoading(false);
 
     if (error) {
-      console.error(error);
+      console.error("방명록 저장 실패:", error);
       alert("메시지 저장 중 오류가 발생했습니다.");
       return;
     }
