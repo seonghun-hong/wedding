@@ -160,7 +160,7 @@ export function GuestbookSection() {
       maxLength={20}
       type="password"
       onChange={(e) => setPassword(e.target.value)}
-      placeholder="삭제 비밀번호"
+      placeholder="비밀번호"
     />
   </div>
 
