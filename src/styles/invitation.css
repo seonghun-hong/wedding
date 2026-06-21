@@ -2262,6 +2262,44 @@ img { display: block; }
   user-select: none;
 }
 
+.gallery-modal-image-wrap {
+  max-width: 100%;
+  max-height: 82vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
+  will-change: transform, opacity;
+}
+
+.gallery-modal-image-wrap.slide-left {
+  transform: translateX(-46px);
+  opacity: 0.25;
+}
+
+.gallery-modal-image-wrap.slide-right {
+  transform: translateX(46px);
+  opacity: 0.25;
+}
+
+.image-modal .gallery-modal-image {
+  max-width: 100%;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #000000;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.image-modal {
+  touch-action: pan-y;
+  user-select: none;
+}
+
 @media (max-width: 480px) {
   .image-modal {
     padding: 48px 12px;
