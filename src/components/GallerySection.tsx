@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { TouchEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { asset } from "../lib/path";
@@ -6,6 +6,9 @@ import { asset } from "../lib/path";
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   const images = showAll ? invitation.gallery : invitation.gallery.slice(0, 9);
 
@@ -34,6 +37,44 @@ export function GallerySection() {
 
       return prev === invitation.gallery.length - 1 ? 0 : prev + 1;
     });
+  };
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (event: TouchEvent<HTMLDivElement>) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+
+    const diffX = touch.clientX - touchStartXRef.current;
+    const diffY = touch.clientY - touchStartYRef.current;
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    const minSwipeDistance = 50;
+    const isHorizontalSwipe = Math.abs(diffX) > Math.abs(diffY);
+
+    if (!isHorizontalSwipe) {
+      return;
+    }
+
+    if (Math.abs(diffX) < minSwipeDistance) {
+      return;
+    }
+
+    if (diffX > 0) {
+      showPrev();
+    } else {
+      showNext();
+    }
   };
 
   useEffect(() => {
@@ -107,7 +148,13 @@ export function GallerySection() {
       )}
 
       {selectedImage && selectedIndex !== null && (
-        <div className="image-modal" onClick={closeModal} role="presentation">
+        <div
+          className="image-modal"
+          onClick={closeModal}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          role="presentation"
+        >
           <button
             className="modal-close"
             type="button"
