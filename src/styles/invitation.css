@@ -821,6 +821,50 @@ img { display: block; }
   text-align: center;
 }
 
+.photo-upload-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.photo-upload-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.photo-file-label {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 48px;
+  border: 1px dashed #c8ced8;
+  border-radius: 8px;
+  background: #f7f8fa;
+  color: #5f6876;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.photo-selected-text {
+  margin: 0;
+  color: #7b8494;
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.upload-submit-button {
+  margin-top: 8px;
+}
+
+.upload-submit-button:disabled {
+  opacity: 0.6;
+}
+
 @media (max-width: 360px) {
   .guestbook-input-row {
     grid-template-columns: 1fr;
