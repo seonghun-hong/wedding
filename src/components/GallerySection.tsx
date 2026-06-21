@@ -3,75 +3,81 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { asset } from "../lib/path";
 
-type SlideDirection = "left" | "right" | null;
+type SlideDirection = "next" | "prev" | null;
 
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  const [displayIndex, setDisplayIndex] = useState<number | null>(null);
+  const [nextIndex, setNextIndex] = useState<number | null>(null);
   const [slideDirection, setSlideDirection] = useState<SlideDirection>(null);
+  const [isSliding, setIsSliding] = useState(false);
 
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const animatingRef = useRef(false);
 
   const images = showAll ? invitation.gallery : invitation.gallery.slice(0, 9);
-
-  const selectedImage =
-    selectedIndex !== null ? invitation.gallery[selectedIndex] : null;
+  const totalCount = invitation.gallery.length;
 
   const closeModal = () => {
     setSelectedIndex(null);
+    setDisplayIndex(null);
+    setNextIndex(null);
     setSlideDirection(null);
+    setIsSliding(false);
+    animatingRef.current = false;
   };
 
-  const moveToPrev = () => {
-    setSelectedIndex((prev) => {
-      if (prev === null) {
-        return prev;
-      }
-
-      return prev === 0 ? invitation.gallery.length - 1 : prev - 1;
-    });
+  const getPrevIndex = (index: number) => {
+    return index === 0 ? totalCount - 1 : index - 1;
   };
 
-  const moveToNext = () => {
-    setSelectedIndex((prev) => {
-      if (prev === null) {
-        return prev;
-      }
+  const getNextIndex = (index: number) => {
+    return index === totalCount - 1 ? 0 : index + 1;
+  };
 
-      return prev === invitation.gallery.length - 1 ? 0 : prev + 1;
+  const openModal = (index: number) => {
+    setSelectedIndex(index);
+    setDisplayIndex(index);
+    setNextIndex(null);
+    setSlideDirection(null);
+    setIsSliding(false);
+  };
+
+  const startSlide = (direction: Exclude<SlideDirection, null>) => {
+    if (animatingRef.current || displayIndex === null) {
+      return;
+    }
+
+    const targetIndex =
+      direction === "next" ? getNextIndex(displayIndex) : getPrevIndex(displayIndex);
+
+    animatingRef.current = true;
+    setNextIndex(targetIndex);
+    setSlideDirection(direction);
+
+    requestAnimationFrame(() => {
+      setIsSliding(true);
     });
+
+    window.setTimeout(() => {
+      setDisplayIndex(targetIndex);
+      setSelectedIndex(targetIndex);
+      setNextIndex(null);
+      setSlideDirection(null);
+      setIsSliding(false);
+      animatingRef.current = false;
+    }, 280);
   };
 
   const slidePrev = () => {
-    if (animatingRef.current) {
-      return;
-    }
-
-    animatingRef.current = true;
-    setSlideDirection("right");
-
-    setTimeout(() => {
-      moveToPrev();
-      setSlideDirection(null);
-      animatingRef.current = false;
-    }, 180);
+    startSlide("prev");
   };
 
   const slideNext = () => {
-    if (animatingRef.current) {
-      return;
-    }
-
-    animatingRef.current = true;
-    setSlideDirection("left");
-
-    setTimeout(() => {
-      moveToNext();
-      setSlideDirection(null);
-      animatingRef.current = false;
-    }, 180);
+    startSlide("next");
   };
 
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
@@ -136,7 +142,7 @@ export function GallerySection() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIndex]);
+  }, [selectedIndex, displayIndex]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -151,6 +157,12 @@ export function GallerySection() {
     };
   }, [selectedIndex]);
 
+  const currentImage =
+    displayIndex !== null ? invitation.gallery[displayIndex] : null;
+
+  const incomingImage =
+    nextIndex !== null ? invitation.gallery[nextIndex] : null;
+
   return (
     <section className="section gallery-section">
       <h2 className="section-title">GALLERY</h2>
@@ -164,7 +176,7 @@ export function GallerySection() {
               className="gallery-item"
               type="button"
               key={src}
-              onClick={() => setSelectedIndex(originalIndex)}
+              onClick={() => openModal(originalIndex)}
             >
               <img src={asset(src)} alt={`웨딩 사진 ${index + 1}`} />
             </button>
@@ -182,7 +194,7 @@ export function GallerySection() {
         </button>
       )}
 
-      {selectedImage && selectedIndex !== null && (
+      {currentImage && selectedIndex !== null && displayIndex !== null && (
         <div
           className="image-modal"
           onClick={closeModal}
@@ -190,11 +202,7 @@ export function GallerySection() {
           onTouchEnd={handleTouchEnd}
           role="presentation"
         >
-          <button
-            className="modal-close"
-            type="button"
-            onClick={closeModal}
-          >
+          <button className="modal-close" type="button" onClick={closeModal}>
             ×
           </button>
 
@@ -211,20 +219,36 @@ export function GallerySection() {
           </button>
 
           <div
-            className={`gallery-modal-image-wrap ${
-              slideDirection === "left"
-                ? "slide-left"
-                : slideDirection === "right"
-                  ? "slide-right"
+            className={`gallery-slider ${
+              slideDirection === "next" && isSliding
+                ? "sliding-next"
+                : slideDirection === "prev" && isSliding
+                  ? "sliding-prev"
                   : ""
             }`}
             onClick={(event) => event.stopPropagation()}
           >
-            <img
-              className="gallery-modal-image"
-              src={asset(selectedImage)}
-              alt={`확대 사진 ${selectedIndex + 1}`}
-            />
+            <div className="gallery-slide current-slide">
+              <img
+                className="gallery-modal-image"
+                src={asset(currentImage)}
+                alt={`확대 사진 ${displayIndex + 1}`}
+              />
+            </div>
+
+            {incomingImage && nextIndex !== null && slideDirection && (
+              <div
+                className={`gallery-slide incoming-slide ${
+                  slideDirection === "next" ? "from-right" : "from-left"
+                }`}
+              >
+                <img
+                  className="gallery-modal-image"
+                  src={asset(incomingImage)}
+                  alt={`확대 사진 ${nextIndex + 1}`}
+                />
+              </div>
+            )}
           </div>
 
           <button
@@ -243,7 +267,7 @@ export function GallerySection() {
             className="gallery-modal-count"
             onClick={(event) => event.stopPropagation()}
           >
-            {selectedIndex + 1} / {invitation.gallery.length}
+            {displayIndex + 1} / {invitation.gallery.length}
           </div>
         </div>
       )}
