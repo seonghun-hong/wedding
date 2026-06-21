@@ -542,6 +542,71 @@ img { display: block; }
   color: #9aa2af;
   font-size: 16px;
 }
+.guestbook-desc {
+  margin: -18px 0 32px;
+  color: #7b8494;
+  line-height: 1.7;
+}
+
+.message-form {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 34px;
+}
+
+.message-form input,
+.message-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.message-form textarea {
+  min-height: 100px;
+  resize: none;
+}
+
+.message-form button:disabled {
+  opacity: 0.6;
+}
+
+.guestbook-warning {
+  margin: 0 0 24px;
+  color: #d97706;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.message-list {
+  display: grid;
+  gap: 18px;
+}
+
+.message-card {
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 22px;
+  text-align: left;
+}
+
+.message-card b {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.message-card p {
+  margin: 0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.empty-message {
+  color: #9aa1ad;
+  font-size: 15px;
+}
 
 @media (max-width: 380px) {
   .section { padding-left: 18px; padding-right: 18px; }
