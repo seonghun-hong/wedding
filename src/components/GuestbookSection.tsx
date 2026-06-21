@@ -8,7 +8,10 @@ type Comment = {
   created_at: string;
 };
 
+type PageItem = number | "...";
+
 const PAGE_SIZE = 5;
+const MESSAGE_PREVIEW_LENGTH = 70;
 
 async function createPasswordHash(password: string) {
   const encoder = new TextEncoder();
@@ -36,6 +39,30 @@ function formatCreatedAt(value: string) {
   });
 }
 
+function getPaginationItems(currentPage: number, totalPages: number): PageItem[] {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, "...", totalPages];
+  }
+
+  if (currentPage >= totalPages - 2) {
+    return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+}
+
+function getPreviewMessage(message: string) {
+  if (message.length <= MESSAGE_PREVIEW_LENGTH) {
+    return message;
+  }
+
+  return `${message.slice(0, MESSAGE_PREVIEW_LENGTH)}...`;
+}
+
 export function GuestbookSection() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -48,9 +75,15 @@ export function GuestbookSection() {
   const [loading, setLoading] = useState(false);
   const [listLoading, setListLoading] = useState(false);
 
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   }, [totalCount]);
+
+  const paginationItems = useMemo(() => {
+    return getPaginationItems(page, totalPages);
+  }, [page, totalPages]);
 
   const loadComments = async (targetPage = page) => {
     if (!hasSupabaseConfig) {
@@ -78,6 +111,7 @@ export function GuestbookSection() {
 
     setComments(data || []);
     setTotalCount(count || 0);
+    setExpandedIds([]);
   };
 
   const submit = async () => {
@@ -188,6 +222,16 @@ export function GuestbookSection() {
     await loadComments(nextPage);
   };
 
+  const toggleExpand = (commentId: string) => {
+    setExpandedIds((prev) => {
+      if (prev.includes(commentId)) {
+        return prev.filter((id) => id !== commentId);
+      }
+
+      return [...prev, commentId];
+    });
+  };
+
   useEffect(() => {
     loadComments(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,27 +291,44 @@ export function GuestbookSection() {
         ) : comments.length === 0 ? (
           <p className="empty-message">아직 등록된 메시지가 없습니다.</p>
         ) : (
-          comments.map((comment) => (
-            <div className="message-card" key={comment.id}>
-              <div className="message-card-header">
-                <div>
-                  <b>{comment.name}</b>
-                  <span className="message-time">
-                    {formatCreatedAt(comment.created_at)}
-                  </span>
+          comments.map((comment) => {
+            const isLongMessage = comment.message.length > MESSAGE_PREVIEW_LENGTH;
+            const isExpanded = expandedIds.includes(comment.id);
+            const displayMessage = isExpanded
+              ? comment.message
+              : getPreviewMessage(comment.message);
+
+            return (
+              <div className="message-card" key={comment.id}>
+                <div className="message-card-header">
+                  <div>
+                    <b>{comment.name}</b>
+                    <span className="message-time">
+                      {formatCreatedAt(comment.created_at)}
+                    </span>
+                  </div>
+
+                  <button
+                    className="message-delete-button"
+                    onClick={() => removeComment(comment.id)}
+                  >
+                    삭제
+                  </button>
                 </div>
 
-                <button
-                  className="message-delete-button"
-                  onClick={() => removeComment(comment.id)}
-                >
-                  삭제
-                </button>
-              </div>
+                <p className="message-text">{displayMessage}</p>
 
-              <p>{comment.message}</p>
-            </div>
-          ))
+                {isLongMessage && (
+                  <button
+                    className="message-more-button"
+                    onClick={() => toggleExpand(comment.id)}
+                  >
+                    {isExpanded ? "접기" : "더보기"}
+                  </button>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -282,14 +343,18 @@ export function GuestbookSection() {
           </button>
 
           <div className="pagination-numbers">
-            {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-              (pageNumber) => (
+            {paginationItems.map((item, index) =>
+              item === "..." ? (
+                <span className="pagination-ellipsis" key={`ellipsis-${index}`}>
+                  ...
+                </span>
+              ) : (
                 <button
-                  key={pageNumber}
-                  className={pageNumber === page ? "active" : ""}
-                  onClick={() => movePage(pageNumber)}
+                  key={item}
+                  className={item === page ? "active" : ""}
+                  onClick={() => movePage(item)}
                 >
-                  {pageNumber}
+                  {item}
                 </button>
               )
             )}
