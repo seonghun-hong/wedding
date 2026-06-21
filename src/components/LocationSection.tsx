@@ -185,12 +185,12 @@ export function LocationSection() {
       <div className="location-info-list">
         <div className="location-info-item">
           <strong>지하철</strong>
-          <p>건대입구역 5번 출구에서 도보 3분</p>
+          <p>2호선, 7호선 건대입구역 5번 출구</p>
         </div>
 
         <div className="location-info-item">
           <strong>주차</strong>
-          <p>웨딩홀 지하 주차장 / 2시간 무료</p>
+          <p>건물 내 주차 가능</p>
         </div>
       </div>
     </section>
