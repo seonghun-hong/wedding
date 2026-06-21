@@ -698,6 +698,129 @@ img { display: block; }
   min-width: 54px !important;
 }
 
+.message-list {
+  display: grid;
+  gap: 12px;
+}
+
+.message-card {
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 16px 18px;
+  text-align: left;
+}
+
+.message-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.message-card-header b {
+  display: block;
+  margin-bottom: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.message-time {
+  display: block;
+  margin-top: 4px;
+  color: #9aa1ad;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.message-text {
+  margin: 0;
+  color: #374151;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.message-delete-button {
+  border: none;
+  background: transparent;
+  color: #a1a8b3;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0 2px 10px;
+  white-space: nowrap;
+}
+
+.message-delete-button:hover {
+  color: #111827;
+}
+
+.message-more-button {
+  margin-top: 8px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.message-more-button:hover {
+  color: #111827;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 24px;
+}
+
+.pagination-numbers {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination button {
+  border: none;
+  background: #f4f6f8;
+  color: #6b7280;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  background: #09111f;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pagination-arrow {
+  padding: 0 10px;
+  min-width: 46px !important;
+}
+
+.pagination-ellipsis {
+  min-width: 18px;
+  color: #9aa1ad;
+  font-size: 13px;
+  text-align: center;
+}
+
 @media (max-width: 360px) {
   .guestbook-input-row {
     grid-template-columns: 1fr;
