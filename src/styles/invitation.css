@@ -320,30 +320,6 @@ img { display: block; }
 }
 .location-section p {
   margin: 6px 0;
-  color: #4d5768;
-  font-size: 16px;
-}
-.map-buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-  margin: 38px 0 35px;
-}
-.map-btn {
-  min-height: 49px;
-  border: none;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 15px;
-  font-weight: 800;
-  white-space: nowrap;
-}
-.kakao-btn { background: #ffe500; color: #111827; }
-.naver-btn { background: #22c55e; color: white; }
-.google-btn { background: #4285f4; color: white; }
 .transport-list { text-align: left; }
 .transport-row {
   display: grid;
@@ -458,25 +434,6 @@ img { display: block; }
   outline: none;
 }
 .guest-form textarea { min-height: 96px; resize: vertical; }
-.message-list { display: grid; gap: 20px; }
-.message-card {
-  border-radius: 10px;
-  background: var(--soft);
-  padding: 24px 24px 25px;
-  text-align: left;
-}
-.message-card b {
-  display: block;
-  margin-bottom: 20px;
-  color: #07101f;
-  font-size: 16px;
-}
-.message-card p {
-  margin: 0;
-  color: #152033;
-  font-size: 16px;
-  line-height: 1.8;
-}
 
 /* UPLOAD */
 .upload-section {
@@ -580,28 +537,6 @@ img { display: block; }
   line-height: 1.6;
 }
 
-.message-list {
-  display: grid;
-  gap: 18px;
-}
-
-.message-card {
-  background: var(--soft);
-  border-radius: 10px;
-  padding: 22px;
-  text-align: left;
-}
-
-.message-card b {
-  display: block;
-  margin-bottom: 18px;
-}
-
-.message-card p {
-  margin: 0;
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
 
 .empty-message {
   color: #9aa1ad;
@@ -615,29 +550,6 @@ img { display: block; }
   text-align: left;
 }
 
-.message-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 18px;
-}
-
-.message-card-header b {
-  margin-bottom: 0;
-}
-
-.message-delete-button {
-  border: none;
-  background: transparent;
-  color: #9aa1ad;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 4px 0 4px 12px;
-}
-
-.message-delete-button:hover {
-  color: #111827;
-}
 
 .guestbook-input-row {
   display: grid;
@@ -647,55 +559,6 @@ img { display: block; }
 
 .guestbook-input-row input {
   min-width: 0;
-}
-.message-time {
-  display: block;
-  margin-top: 6px;
-  color: #9aa1ad;
-  font-size: 12px;
-  font-weight: 400;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 28px;
-}
-
-.pagination-numbers {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-}
-
-.pagination button {
-  border: none;
-  background: #f4f6f8;
-  color: #6b7280;
-  min-width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.pagination button.active {
-  background: #09111f;
-  color: #ffffff;
-  font-weight: 700;
-}
-
-.pagination button:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.pagination-arrow {
-  padding: 0 12px;
-  min-width: 54px !important;
 }
 
 .message-list {
@@ -993,7 +856,6 @@ img { display: block; }
   .calendar-inner { padding-left: 24px; padding-right: 24px; }
   .date-grid { row-gap: 17px; }
   .map-buttons { gap: 7px; }
-  .map-btn { font-size: 13px; }
   .countdown { gap: 9px; }
   .count-item strong { font-size: 24px; }
 }
