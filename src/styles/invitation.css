@@ -2252,6 +2252,16 @@ img { display: block; }
   font-weight: 700;
 }
 
+.image-modal {
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.gallery-modal-image {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 @media (max-width: 480px) {
   .image-modal {
     padding: 48px 12px;
