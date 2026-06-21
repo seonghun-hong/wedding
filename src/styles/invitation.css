@@ -327,10 +327,10 @@ img { display: block; }
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 9px;
-  margin: 38px 0 46px;
+  margin: 38px 0 35px;
 }
 .map-btn {
-  min-height: 35px;
+  min-height: 49px;
   border: none;
   border-radius: 7px;
   display: inline-flex;
