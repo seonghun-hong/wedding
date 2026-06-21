@@ -367,6 +367,7 @@ img { display: block; }
 /* ACCOUNT */
 .account-section {
   padding-top: 54px;
+  padding-bottom: 0px;
   text-align: left;
 }
 .account-section .section-title { text-align: center; }
@@ -433,7 +434,7 @@ img { display: block; }
 }
 
 /* GUESTBOOK */
-.guestbook-section { padding: 18px 18px; }
+.guestbook-section { padding: 58px 18px; }
 .korean-title {
   margin: 0 0 38px;
   color: #07101f;
