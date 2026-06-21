@@ -46,31 +46,38 @@ export function GallerySection() {
     setIsSliding(false);
   };
 
-  const startSlide = (direction: Exclude<SlideDirection, null>) => {
-    if (animatingRef.current || displayIndex === null) {
-      return;
-    }
+const startSlide = (direction: Exclude<SlideDirection, null>) => {
+  if (animatingRef.current || displayIndex === null) {
+    return;
+  }
 
-    const targetIndex =
-      direction === "next" ? getNextIndex(displayIndex) : getPrevIndex(displayIndex);
+  const targetIndex =
+    direction === "next" ? getNextIndex(displayIndex) : getPrevIndex(displayIndex);
 
-    animatingRef.current = true;
-    setNextIndex(targetIndex);
-    setSlideDirection(direction);
+  animatingRef.current = true;
 
+  // 1단계: 다음 사진을 화면 밖에 먼저 배치
+  setNextIndex(targetIndex);
+  setSlideDirection(direction);
+  setIsSliding(false);
+
+  // 2단계: 브라우저가 화면 밖 배치를 먼저 그리게 한 뒤
+  // 다음 프레임에서 sliding 클래스를 붙여야 애니메이션이 보임
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       setIsSliding(true);
     });
+  });
 
-    window.setTimeout(() => {
-      setDisplayIndex(targetIndex);
-      setSelectedIndex(targetIndex);
-      setNextIndex(null);
-      setSlideDirection(null);
-      setIsSliding(false);
-      animatingRef.current = false;
-    }, 280);
-  };
+  window.setTimeout(() => {
+    setDisplayIndex(targetIndex);
+    setSelectedIndex(targetIndex);
+    setNextIndex(null);
+    setSlideDirection(null);
+    setIsSliding(false);
+    animatingRef.current = false;
+  }, 320);
+};
 
   const slidePrev = () => {
     startSlide("prev");
