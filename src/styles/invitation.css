@@ -648,6 +648,55 @@ img { display: block; }
 .guestbook-input-row input {
   min-width: 0;
 }
+.message-time {
+  display: block;
+  margin-top: 6px;
+  color: #9aa1ad;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.pagination-numbers {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination button {
+  border: none;
+  background: #f4f6f8;
+  color: #6b7280;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pagination button.active {
+  background: #09111f;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.pagination button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pagination-arrow {
+  padding: 0 12px;
+  min-width: 54px !important;
+}
 
 @media (max-width: 360px) {
   .guestbook-input-row {
