@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { CalendarDays, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { downloadCalendar } from "../lib/calendar";
@@ -13,21 +14,46 @@ const WEDDING_URL = "https://seonghun-hong.github.io/wedding/";
 const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og.jpg";
 
 export function FooterSection() {
+  const [toastMessage, setToastMessage] = useState("");
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+  };
+
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToastMessage("");
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [toastMessage]);
+
   const copyLink = async () => {
-    await copyText(WEDDING_URL);
-    alert("링크가 복사되었습니다.");
+    try {
+      await copyText(WEDDING_URL);
+      showToast("링크가 복사되었습니다.");
+    } catch (error) {
+      console.error("링크 복사 실패:", error);
+      showToast("링크 복사에 실패했습니다.");
+    }
   };
 
   const kakaoShare = () => {
     if (!window.Kakao) {
-      alert("카카오 SDK를 불러오지 못했습니다.");
+      showToast("카카오 SDK를 불러오지 못했습니다.");
       return;
     }
 
     const kakaoKey = import.meta.env.VITE_KAKAO_JS_KEY;
 
     if (!kakaoKey) {
-      alert("VITE_KAKAO_JS_KEY를 설정해주세요.");
+      showToast("카카오 키가 설정되지 않았습니다.");
       return;
     }
 
@@ -58,6 +84,11 @@ export function FooterSection() {
     });
   };
 
+  const handleCalendarDownload = () => {
+    downloadCalendar();
+    showToast("캘린더 파일이 저장되었습니다.");
+  };
+
   return (
     <footer className="footer-section">
       <div className="footer-buttons">
@@ -78,7 +109,7 @@ export function FooterSection() {
         <button
           className="footer-btn calendar-share"
           type="button"
-          onClick={downloadCalendar}
+          onClick={handleCalendarDownload}
         >
           <CalendarDays size={28} />
           <span>캘린더</span>
@@ -90,6 +121,12 @@ export function FooterSection() {
         {invitation.groom.name.toLowerCase()} &{" "}
         {invitation.bride.name.toLowerCase()}.
       </p>
+
+      {toastMessage && (
+        <div className="toast-message" role="status">
+          {toastMessage}
+        </div>
+      )}
     </footer>
   );
 }
