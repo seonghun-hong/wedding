@@ -639,6 +639,22 @@ img { display: block; }
   color: #111827;
 }
 
+.guestbook-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.guestbook-input-row input {
+  min-width: 0;
+}
+
+@media (max-width: 360px) {
+  .guestbook-input-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 380px) {
   .section { padding-left: 18px; padding-right: 18px; }
   .hero { height: 620px; }
