@@ -367,6 +367,7 @@ img { display: block; }
 /* ACCOUNT */
 .account-section {
   padding-top: 54px;
+  padding-bottom: 24px;
   text-align: left;
 }
 .account-section .section-title { text-align: center; }
