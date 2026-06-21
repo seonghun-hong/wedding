@@ -5,9 +5,11 @@ import { supabase, hasSupabaseConfig } from "../lib/supabase";
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILE_COUNT = 10;
 
+type UploadStatus = "waiting" | "uploading" | "success" | "error";
+
 type UploadFileItem = {
   file: File;
-  status: "waiting" | "uploading" | "success" | "error";
+  status: UploadStatus;
   errorMessage?: string;
 };
 
@@ -36,6 +38,31 @@ function formatFileSize(size: number) {
   return `${mb.toFixed(1)}MB`;
 }
 
+function sanitizeFolderName(value: string) {
+  return value
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/[\\/:*?"<>|#%&{}$!'@+`=]/g, "")
+    .slice(0, 30);
+}
+
+function getPhoneLast4(phone: string) {
+  const onlyNumbers = phone.replace(/\D/g, "");
+
+  if (!onlyNumbers) {
+    return "no-phone";
+  }
+
+  return onlyNumbers.slice(-4);
+}
+
+function getUploaderFolderName(name: string, phone: string) {
+  const safeName = sanitizeFolderName(name) || "unknown";
+  const phoneLast4 = getPhoneLast4(phone);
+
+  return `${safeName}_${phoneLast4}`;
+}
+
 export function PhotoUploadSection() {
   const [uploaderName, setUploaderName] = useState("");
   const [uploaderPhone, setUploaderPhone] = useState("");
@@ -55,12 +82,14 @@ export function PhotoUploadSection() {
     }
 
     const invalidFile = nextFiles.find((file) => !isAllowedFile(file));
+
     if (invalidFile) {
       alert("사진 또는 동영상 파일만 업로드할 수 있습니다.");
       return;
     }
 
     const oversizedFile = nextFiles.find((file) => file.size > MAX_FILE_SIZE);
+
     if (oversizedFile) {
       alert(`파일 1개당 ${formatFileSize(MAX_FILE_SIZE)} 이하만 업로드할 수 있습니다.`);
       return;
@@ -75,11 +104,17 @@ export function PhotoUploadSection() {
   };
 
   const uploadOneFile = async (item: UploadFileItem) => {
+    const trimmedName = uploaderName.trim();
+    const trimmedPhone = uploaderPhone.trim();
+
     const ext = getFileExtension(item.file.name);
     const mediaType = getMediaType(item.file);
     const folderName = mediaType === "video" ? "videos" : "images";
+
+    const uploaderFolder = getUploaderFolderName(trimmedName, trimmedPhone);
     const safeFileName = `${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const storagePath = `guest/${folderName}/${safeFileName}`;
+
+    const storagePath = `guest/${uploaderFolder}/${folderName}/${safeFileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("wedding-photos")
@@ -98,8 +133,8 @@ export function PhotoUploadSection() {
       .getPublicUrl(storagePath);
 
     const { error: insertError } = await supabase.from("uploaded_photos").insert({
-      uploader_name: uploaderName.trim(),
-      uploader_phone: uploaderPhone.trim() || null,
+      uploader_name: trimmedName,
+      uploader_phone: trimmedPhone || null,
       photo_url: publicUrlData.publicUrl,
       storage_path: storagePath,
       media_type: mediaType,
@@ -139,7 +174,9 @@ export function PhotoUploadSection() {
     for (let index = 0; index < files.length; index += 1) {
       setFiles((prev) =>
         prev.map((item, itemIndex) =>
-          itemIndex === index ? { ...item, status: "uploading", errorMessage: undefined } : item
+          itemIndex === index
+            ? { ...item, status: "uploading", errorMessage: undefined }
+            : item
         )
       );
 
@@ -182,6 +219,7 @@ export function PhotoUploadSection() {
       setFiles([]);
 
       const fileInput = document.getElementById("wedding-media-input") as HTMLInputElement | null;
+
       if (fileInput) {
         fileInput.value = "";
       }
@@ -236,24 +274,28 @@ export function PhotoUploadSection() {
 
         {files.length > 0 && (
           <div className="selected-file-list">
-            {files.map((item, index) => (
-              <div className="selected-file-item" key={`${item.file.name}-${index}`}>
-                <div>
-                  <strong>{item.file.name}</strong>
-                  <span>
-                    {getMediaType(item.file) === "video" ? "동영상" : "사진"} ·{" "}
-                    {formatFileSize(item.file.size)}
-                  </span>
-                </div>
+            {files.map((item, index) => {
+              const mediaType = getMediaType(item.file);
 
-                <em className={`upload-status ${item.status}`}>
-                  {item.status === "waiting" && "대기"}
-                  {item.status === "uploading" && "업로드 중"}
-                  {item.status === "success" && "완료"}
-                  {item.status === "error" && "실패"}
-                </em>
-              </div>
-            ))}
+              return (
+                <div className="selected-file-item" key={`${item.file.name}-${index}`}>
+                  <div>
+                    <strong>{item.file.name}</strong>
+                    <span>
+                      {mediaType === "video" ? "동영상" : "사진"} ·{" "}
+                      {formatFileSize(item.file.size)}
+                    </span>
+                  </div>
+
+                  <em className={`upload-status ${item.status}`}>
+                    {item.status === "waiting" && "대기"}
+                    {item.status === "uploading" && "업로드 중"}
+                    {item.status === "success" && "완료"}
+                    {item.status === "error" && "실패"}
+                  </em>
+                </div>
+              );
+            })}
           </div>
         )}
 
