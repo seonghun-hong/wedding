@@ -931,7 +931,7 @@ img { display: block; }
 
 .map-buttons .map-button {
   width: 100%;
-  height: 46px;
+  height: 35px;
   min-width: 0;
 
   border: none;
