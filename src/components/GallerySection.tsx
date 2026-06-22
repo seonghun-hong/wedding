@@ -34,6 +34,13 @@ export function GallerySection() {
     return index === totalCount - 1 ? 0 : index + 1;
   };
 
+  const resetPointer = () => {
+    pointerIdRef.current = null;
+    startXRef.current = null;
+    startYRef.current = null;
+    latestOffsetRef.current = 0;
+  };
+
   const openModal = (index: number) => {
     selectedIndexRef.current = index;
     setSelectedIndex(index);
@@ -50,6 +57,7 @@ export function GallerySection() {
     latestOffsetRef.current = 0;
     setIsAnimating(false);
     pendingTargetRef.current = null;
+    resetPointer();
   };
 
   const finishSlide = (target: Exclude<SlideTarget, null>) => {
@@ -102,12 +110,6 @@ export function GallerySection() {
       nextSelectedIndex = getPrevIndex(currentIndex);
     }
 
-    /*
-      중요:
-      여기서 isAnimating을 먼저 false로 바꾸고,
-      selectedIndex와 dragOffset을 같은 렌더에서 리셋해야
-      중앙 복귀가 애니메이션 없이 즉시 처리됩니다.
-    */
     pendingTargetRef.current = null;
     selectedIndexRef.current = nextSelectedIndex;
     latestOffsetRef.current = 0;
@@ -127,109 +129,110 @@ export function GallerySection() {
     startYRef.current = event.clientY;
     latestOffsetRef.current = 0;
 
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // pointer capture 실패 시 무시
+    }
   };
 
-const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-  if (
-    pointerIdRef.current !== event.pointerId ||
-    startXRef.current === null ||
-    startYRef.current === null ||
-    isAnimating
-  ) {
-    return;
-  }
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (
+      pointerIdRef.current !== event.pointerId ||
+      startXRef.current === null ||
+      startYRef.current === null ||
+      isAnimating
+    ) {
+      return;
+    }
 
-  const diffX = event.clientX - startXRef.current;
-  const diffY = event.clientY - startYRef.current;
+    const diffX = event.clientX - startXRef.current;
+    const diffY = event.clientY - startYRef.current;
 
-  const absX = Math.abs(diffX);
-  const absY = Math.abs(diffY);
+    const absX = Math.abs(diffX);
+    const absY = Math.abs(diffY);
 
-  /*
-    세로 움직임이 더 크면 갤러리 슬라이드로 처리하지 않음.
-    이걸 안 하면 위아래 스크롤/스와이프 때 포인터가 꼬여서 멈춘 것처럼 보일 수 있음.
-  */
-  if (absY > absX && absY > 8) {
-    pointerIdRef.current = null;
-    startXRef.current = null;
-    startYRef.current = null;
-    latestOffsetRef.current = 0;
-    setDragOffset(0);
+    /*
+      세로 움직임이 더 크면 갤러리 슬라이드로 처리하지 않고 초기화.
+      위아래로 움직였을 때 멈추는 현상 방지.
+    */
+    if (absY > absX && absY > 8) {
+      resetPointer();
+      setDragOffset(0);
+
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // 이미 해제된 경우 무시
+      }
+
+      return;
+    }
+
+    /*
+      좌우 움직임이 확실하지 않으면 아직 슬라이드 처리하지 않음.
+    */
+    if (absX < 8) {
+      return;
+    }
+
+    event.preventDefault();
+
+    setDragOffset(diffX);
+    latestOffsetRef.current = diffX;
+  };
+
+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
+      return;
+    }
+
+    const offset = latestOffsetRef.current;
+
+    resetPointer();
 
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
     } catch {
-      // 이미 해제된 경우 무시
+      // 이미 release 된 경우 무시
     }
 
-    return;
-  }
+    const width = window.innerWidth;
+    const threshold = Math.min(110, width * 0.25);
 
-  /*
-    좌우 움직임이 확실하지 않으면 아직 처리하지 않음
-  */
-  if (absX < 8) {
-    return;
-  }
+    if (offset <= -threshold) {
+      finishSlide("next");
+      return;
+    }
 
-  event.preventDefault();
+    if (offset >= threshold) {
+      finishSlide("prev");
+      return;
+    }
 
-  setDragOffset(diffX);
-  latestOffsetRef.current = diffX;
-};
+    finishSlide("center");
+  };
 
-const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-  if (pointerIdRef.current !== event.pointerId) {
-    return;
-  }
+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== event.pointerId) {
+      return;
+    }
 
-  const offset = latestOffsetRef.current;
+    resetPointer();
 
-  pointerIdRef.current = null;
-  startXRef.current = null;
-  startYRef.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // 이미 release 된 경우 무시
+    }
 
-  try {
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  } catch {
-    // 이미 release 된 경우 무시
-  }
+    finishSlide("center");
+  };
 
-  const width = window.innerWidth;
-  const threshold = Math.min(110, width * 0.25);
-
-  if (offset <= -threshold) {
-    finishSlide("next");
-    return;
-  }
-
-  if (offset >= threshold) {
-    finishSlide("prev");
-    return;
-  }
-
-  finishSlide("center");
-};
-
-const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
-  if (pointerIdRef.current !== event.pointerId) {
-    return;
-  }
-
-  pointerIdRef.current = null;
-  startXRef.current = null;
-  startYRef.current = null;
-  latestOffsetRef.current = 0;
-
-  try {
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  } catch {
-    // 이미 release 된 경우 무시
-  }
-
-  finishSlide("center");
-};
+  useEffect(() => {
+    if (selectedIndex === null) {
+      return;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -328,6 +331,7 @@ const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerCancel={handlePointerCancel}
+            onPointerLeave={handlePointerCancel}
           >
             <div
               className="photo-viewer-track"
