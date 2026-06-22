@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { asset } from "../lib/path";
@@ -6,6 +12,71 @@ import { asset } from "../lib/path";
 type SlideTarget = "prev" | "next" | "center" | null;
 
 const SLIDE_DURATION = 260;
+
+/*
+  원본:
+  /images/gallery/01.jpg
+
+  썸네일:
+  /images/gallery/thumbs/01.webp
+*/
+function getThumbnailSrc(src: string) {
+  const lastSlashIndex = src.lastIndexOf("/");
+  const folder = src.slice(0, lastSlashIndex);
+  const fileName = src.slice(lastSlashIndex + 1);
+  const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+
+  return `${folder}/thumbs/${fileNameWithoutExt}.webp`;
+}
+
+function LazyRender({
+  children,
+  placeholderClassName,
+}: {
+  children: ReactNode;
+  placeholderClassName: string;
+}) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [shouldRender, setShouldRender] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+
+    if (!element) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldRender(true);
+          observer.disconnect();
+        }
+      },
+      {
+        /*
+          화면에 들어오기 전 600px 근처에서 미리 렌더링.
+          즉, 갤러리까지 스크롤하기 전부터 조금씩 준비함.
+        */
+        root: null,
+        rootMargin: "600px 0px",
+        threshold: 0.01,
+      }
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className={placeholderClassName}>
+      {shouldRender ? children : null}
+    </div>
+  );
+}
 
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
@@ -23,6 +94,11 @@ export function GallerySection() {
   const animationTimerRef = useRef<number | null>(null);
 
   const gallery = invitation.gallery;
+
+  /*
+    처음에는 9장만 DOM 후보로 둠.
+    그리고 그 9장도 LazyRender 때문에 화면 가까이 올 때까지 img 자체는 안 생김.
+  */
   const images = showAll ? gallery : gallery.slice(0, 9);
   const totalCount = gallery.length;
 
@@ -101,11 +177,6 @@ export function GallerySection() {
     animatingRef.current = false;
     latestOffsetRef.current = 0;
 
-    /*
-      중요:
-      여기서 isAnimating=false와 dragOffset=0을 같이 처리해서
-      중앙 리셋은 애니메이션 없이 즉시 처리되게 함.
-    */
     setIsAnimating(false);
     setSelectedIndex(nextSelectedIndex);
     setDragOffset(0);
@@ -138,10 +209,6 @@ export function GallerySection() {
 
     clearAnimationTimer();
 
-    /*
-      transitionEnd에 의존하지 않음.
-      이동거리가 0이어도 무조건 상태가 풀리게 함.
-    */
     animationTimerRef.current = window.setTimeout(() => {
       completeSlide();
     }, SLIDE_DURATION + 40);
@@ -198,10 +265,6 @@ export function GallerySection() {
     const absX = Math.abs(diffX);
     const absY = Math.abs(diffY);
 
-    /*
-      세로 움직임은 갤러리 슬라이드로 처리하지 않음.
-      상태만 즉시 초기화.
-    */
     if (absY > absX && absY > 8) {
       resetPointer();
       setDragOffset(0);
@@ -254,10 +317,6 @@ export function GallerySection() {
       return;
     }
 
-    /*
-      거의 안 움직인 터치는 애니메이션을 걸지 않고 즉시 복귀.
-      이게 화살표 옆 터치 후 멈춤을 막는 핵심.
-    */
     if (Math.abs(offset) < 8) {
       resetAnimation();
       return;
@@ -282,10 +341,6 @@ export function GallerySection() {
     resetAnimation();
   };
 
-  /*
-    혹시 pointerup이 다른 곳에서 끝나도 상태가 남지 않게 하는 보험.
-    여기서는 isAnimating을 true로 만들지 않고 그냥 초기화만 함.
-  */
   useEffect(() => {
     if (selectedIndex === null) {
       return;
@@ -366,16 +421,34 @@ export function GallerySection() {
       <div className="gallery-grid">
         {images.map((src, index) => {
           const originalIndex = gallery.indexOf(src);
+          const thumbnailSrc = getThumbnailSrc(src);
 
           return (
-            <button
-              className="gallery-item"
-              type="button"
+            <LazyRender
               key={src}
-              onClick={() => openModal(originalIndex)}
+              placeholderClassName="gallery-lazy-placeholder"
             >
-              <img src={asset(src)} alt={`웨딩 사진 ${index + 1}`} />
-            </button>
+              <button
+                className="gallery-item"
+                type="button"
+                onClick={() => openModal(originalIndex)}
+              >
+                <img
+                  src={asset(thumbnailSrc)}
+                  alt={`웨딩 사진 ${index + 1}`}
+                  loading="lazy"
+                  decoding="async"
+                  /*
+                    썸네일 파일이 없으면 원본으로 fallback.
+                    처음에는 썸네일 파일 만드는 걸 추천.
+                  */
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = asset(src);
+                  }}
+                />
+              </button>
+            </LazyRender>
           );
         })}
       </div>
@@ -448,6 +521,8 @@ export function GallerySection() {
                   src={asset(gallery[prevIndex])}
                   alt={`이전 사진 ${prevIndex + 1}`}
                   draggable={false}
+                  loading="eager"
+                  decoding="async"
                 />
               </div>
 
@@ -456,6 +531,8 @@ export function GallerySection() {
                   src={asset(gallery[selectedIndex])}
                   alt={`확대 사진 ${selectedIndex + 1}`}
                   draggable={false}
+                  loading="eager"
+                  decoding="async"
                 />
               </div>
 
@@ -464,6 +541,8 @@ export function GallerySection() {
                   src={asset(gallery[nextIndex])}
                   alt={`다음 사진 ${nextIndex + 1}`}
                   draggable={false}
+                  loading="eager"
+                  decoding="async"
                 />
               </div>
             </div>
