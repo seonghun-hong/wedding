@@ -36,6 +36,24 @@ export function HeroSection() {
         <span>{muted ? "음소거 해제" : "음소거"}</span>
       </button>
 
+      <button
+  className="hero-scroll-guide"
+  type="button"
+  onClick={() => {
+    const nextSection = document.querySelector(".intro-section");
+
+    if (nextSection) {
+      nextSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }}
+>
+  <span>아래로 내려주세요</span>
+  <em>⌄</em>
+</button>
+      
     </section>
   );
 }
