@@ -8,13 +8,41 @@ export function HeroSection() {
 
   const toggleMute = async () => {
     const video = videoRef.current;
-    if (!video) return;
+
+    if (!video) {
+      return;
+    }
+
     video.muted = !video.muted;
     setMuted(video.muted);
+
     try {
       await video.play();
     } catch {
       // 모바일 자동재생 제한 대응
+    }
+  };
+
+  const scrollToNextSection = () => {
+    const introSection = document.querySelector(".intro-section");
+
+    if (introSection) {
+      introSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      return;
+    }
+
+    const heroSection = document.querySelector(".hero");
+    const nextSection = heroSection?.nextElementSibling;
+
+    if (nextSection) {
+      nextSection.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   };
 
@@ -37,23 +65,13 @@ export function HeroSection() {
       </button>
 
       <button
-  className="hero-scroll-guide"
-  type="button"
-  onClick={() => {
-    const nextSection = document.querySelector(".intro-section");
-
-    if (nextSection) {
-      nextSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  }}
->
-  <span>아래로 내려주세요</span>
-  <em>⌄</em>
-</button>
-      
+        className="hero-scroll-guide"
+        type="button"
+        onClick={scrollToNextSection}
+      >
+        <span>아래로 내려주세요</span>
+        <em>⌄</em>
+      </button>
     </section>
   );
 }
