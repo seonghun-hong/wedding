@@ -5,6 +5,8 @@ import { asset } from "../lib/path";
 
 type SlideTarget = "prev" | "next" | "center" | null;
 
+const SLIDE_DURATION = 260;
+
 export function GallerySection() {
   const [showAll, setShowAll] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -15,8 +17,10 @@ export function GallerySection() {
   const startXRef = useRef<number | null>(null);
   const startYRef = useRef<number | null>(null);
   const latestOffsetRef = useRef(0);
-  const pendingTargetRef = useRef<SlideTarget>(null);
   const pointerIdRef = useRef<number | null>(null);
+  const animatingRef = useRef(false);
+  const pendingTargetRef = useRef<SlideTarget>(null);
+  const animationTimerRef = useRef<number | null>(null);
 
   const gallery = invitation.gallery;
   const images = showAll ? gallery : gallery.slice(0, 9);
@@ -34,6 +38,13 @@ export function GallerySection() {
     return index === totalCount - 1 ? 0 : index + 1;
   };
 
+  const clearAnimationTimer = () => {
+    if (animationTimerRef.current !== null) {
+      window.clearTimeout(animationTimerRef.current);
+      animationTimerRef.current = null;
+    }
+  };
+
   const resetPointer = () => {
     pointerIdRef.current = null;
     startXRef.current = null;
@@ -41,30 +52,69 @@ export function GallerySection() {
     latestOffsetRef.current = 0;
   };
 
+  const resetAnimation = () => {
+    clearAnimationTimer();
+    animatingRef.current = false;
+    pendingTargetRef.current = null;
+    setIsAnimating(false);
+    setDragOffset(0);
+    latestOffsetRef.current = 0;
+  };
+
   const openModal = (index: number) => {
     selectedIndexRef.current = index;
     setSelectedIndex(index);
-    setDragOffset(0);
-    latestOffsetRef.current = 0;
-    setIsAnimating(false);
-    pendingTargetRef.current = null;
     resetPointer();
+    resetAnimation();
   };
 
   const closeModal = () => {
     selectedIndexRef.current = null;
     setSelectedIndex(null);
-    setDragOffset(0);
-    latestOffsetRef.current = 0;
-    setIsAnimating(false);
-    pendingTargetRef.current = null;
     resetPointer();
+    resetAnimation();
+  };
+
+  const completeSlide = () => {
+    const currentIndex = selectedIndexRef.current;
+    const target = pendingTargetRef.current;
+
+    if (currentIndex === null || !target) {
+      resetAnimation();
+      return;
+    }
+
+    let nextSelectedIndex = currentIndex;
+
+    if (target === "next") {
+      nextSelectedIndex = getNextIndex(currentIndex);
+    }
+
+    if (target === "prev") {
+      nextSelectedIndex = getPrevIndex(currentIndex);
+    }
+
+    clearAnimationTimer();
+
+    selectedIndexRef.current = nextSelectedIndex;
+    pendingTargetRef.current = null;
+    animatingRef.current = false;
+    latestOffsetRef.current = 0;
+
+    /*
+      중요:
+      여기서 isAnimating=false와 dragOffset=0을 같이 처리해서
+      중앙 리셋은 애니메이션 없이 즉시 처리되게 함.
+    */
+    setIsAnimating(false);
+    setSelectedIndex(nextSelectedIndex);
+    setDragOffset(0);
   };
 
   const finishSlide = (target: Exclude<SlideTarget, null>) => {
     const currentIndex = selectedIndexRef.current;
 
-    if (currentIndex === null || isAnimating) {
+    if (currentIndex === null || animatingRef.current) {
       return;
     }
 
@@ -80,9 +130,21 @@ export function GallerySection() {
     }
 
     pendingTargetRef.current = target;
+    animatingRef.current = true;
+
     setIsAnimating(true);
     setDragOffset(finalOffset);
     latestOffsetRef.current = finalOffset;
+
+    clearAnimationTimer();
+
+    /*
+      transitionEnd에 의존하지 않음.
+      이동거리가 0이어도 무조건 상태가 풀리게 함.
+    */
+    animationTimerRef.current = window.setTimeout(() => {
+      completeSlide();
+    }, SLIDE_DURATION + 40);
   };
 
   const slidePrev = () => {
@@ -93,44 +155,13 @@ export function GallerySection() {
     finishSlide("next");
   };
 
-  const handleTransitionEnd = () => {
-    const currentIndex = selectedIndexRef.current;
-    const target = pendingTargetRef.current;
-
-    if (currentIndex === null || !target) {
-      return;
-    }
-
-    let nextSelectedIndex = currentIndex;
-
-    if (target === "next") {
-      nextSelectedIndex = getNextIndex(currentIndex);
-    }
-
-    if (target === "prev") {
-      nextSelectedIndex = getPrevIndex(currentIndex);
-    }
-
-    pendingTargetRef.current = null;
-    selectedIndexRef.current = nextSelectedIndex;
-    latestOffsetRef.current = 0;
-
-    setIsAnimating(false);
-    setSelectedIndex(nextSelectedIndex);
-    setDragOffset(0);
-  };
-
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (isAnimating) {
+    if (animatingRef.current) {
       return;
     }
 
     const target = event.target as HTMLElement;
 
-    /*
-      화살표, 닫기 버튼, 번호 영역에서 시작한 터치는
-      사진 슬라이드로 잡지 않음.
-    */
     if (
       target.closest(".gallery-slide-button") ||
       target.closest(".modal-close") ||
@@ -156,7 +187,7 @@ export function GallerySection() {
       pointerIdRef.current !== event.pointerId ||
       startXRef.current === null ||
       startYRef.current === null ||
-      isAnimating
+      animatingRef.current
     ) {
       return;
     }
@@ -168,12 +199,13 @@ export function GallerySection() {
     const absY = Math.abs(diffY);
 
     /*
-      세로 움직임이 더 크면 슬라이드로 처리하지 않고 초기화.
-      위아래로 움직였을 때 멈추는 현상 방지.
+      세로 움직임은 갤러리 슬라이드로 처리하지 않음.
+      상태만 즉시 초기화.
     */
     if (absY > absX && absY > 8) {
       resetPointer();
       setDragOffset(0);
+      latestOffsetRef.current = 0;
 
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -184,9 +216,6 @@ export function GallerySection() {
       return;
     }
 
-    /*
-      좌우 움직임이 확실하지 않으면 아직 처리하지 않음.
-    */
     if (absX < 8) {
       return;
     }
@@ -225,6 +254,15 @@ export function GallerySection() {
       return;
     }
 
+    /*
+      거의 안 움직인 터치는 애니메이션을 걸지 않고 즉시 복귀.
+      이게 화살표 옆 터치 후 멈춤을 막는 핵심.
+    */
+    if (Math.abs(offset) < 8) {
+      resetAnimation();
+      return;
+    }
+
     finishSlide("center");
   };
 
@@ -241,12 +279,12 @@ export function GallerySection() {
       // 이미 release 된 경우 무시
     }
 
-    finishSlide("center");
+    resetAnimation();
   };
 
   /*
-    터치가 화살표/배경/브라우저 밖에서 끝나도
-    pointer 상태가 남지 않도록 window에서 한 번 더 정리.
+    혹시 pointerup이 다른 곳에서 끝나도 상태가 남지 않게 하는 보험.
+    여기서는 isAnimating을 true로 만들지 않고 그냥 초기화만 함.
   */
   useEffect(() => {
     if (selectedIndex === null) {
@@ -259,12 +297,7 @@ export function GallerySection() {
       }
 
       resetPointer();
-
-      if (!isAnimating) {
-        pendingTargetRef.current = "center";
-        setIsAnimating(true);
-        setDragOffset(0);
-      }
+      resetAnimation();
     };
 
     window.addEventListener("pointerup", clearPointerState);
@@ -276,7 +309,7 @@ export function GallerySection() {
       window.removeEventListener("pointercancel", clearPointerState);
       window.removeEventListener("blur", clearPointerState);
     };
-  }, [selectedIndex, isAnimating]);
+  }, [selectedIndex]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -302,7 +335,7 @@ export function GallerySection() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIndex, isAnimating]);
+  }, [selectedIndex]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -316,6 +349,12 @@ export function GallerySection() {
       document.body.style.overflow = "";
     };
   }, [selectedIndex]);
+
+  useEffect(() => {
+    return () => {
+      clearAnimationTimer();
+    };
+  }, []);
 
   const prevIndex = selectedIndex !== null ? getPrevIndex(selectedIndex) : null;
   const nextIndex = selectedIndex !== null ? getNextIndex(selectedIndex) : null;
@@ -397,11 +436,10 @@ export function GallerySection() {
           >
             <div
               className="photo-viewer-track"
-              onTransitionEnd={handleTransitionEnd}
               style={{
                 transform: `translate3d(calc(-100vw + ${dragOffset}px), 0, 0)`,
                 transition: isAnimating
-                  ? "transform 0.26s cubic-bezier(0.22, 0.61, 0.36, 1)"
+                  ? `transform ${SLIDE_DURATION}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
                   : "none",
               }}
             >
