@@ -1,0 +1,27 @@
+{
+  "name": "wedding",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "generate:thumbs": "node scripts/generate-thumbnails.mjs",
+    "build": "npm run generate:thumbs && tsc -b && node ./node_modules/vite/bin/vite.js build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "sharp": "^0.35.2",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
