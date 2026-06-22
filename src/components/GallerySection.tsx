@@ -48,6 +48,7 @@ export function GallerySection() {
     latestOffsetRef.current = 0;
     setIsAnimating(false);
     pendingTargetRef.current = null;
+    resetPointer();
   };
 
   const closeModal = () => {
@@ -124,6 +125,20 @@ export function GallerySection() {
       return;
     }
 
+    const target = event.target as HTMLElement;
+
+    /*
+      화살표, 닫기 버튼, 번호 영역에서 시작한 터치는
+      사진 슬라이드로 잡지 않음.
+    */
+    if (
+      target.closest(".gallery-slide-button") ||
+      target.closest(".modal-close") ||
+      target.closest(".gallery-modal-count")
+    ) {
+      return;
+    }
+
     pointerIdRef.current = event.pointerId;
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
@@ -153,7 +168,7 @@ export function GallerySection() {
     const absY = Math.abs(diffY);
 
     /*
-      세로 움직임이 더 크면 갤러리 슬라이드로 처리하지 않고 초기화.
+      세로 움직임이 더 크면 슬라이드로 처리하지 않고 초기화.
       위아래로 움직였을 때 멈추는 현상 방지.
     */
     if (absY > absX && absY > 8) {
@@ -170,7 +185,7 @@ export function GallerySection() {
     }
 
     /*
-      좌우 움직임이 확실하지 않으면 아직 슬라이드 처리하지 않음.
+      좌우 움직임이 확실하지 않으면 아직 처리하지 않음.
     */
     if (absX < 8) {
       return;
@@ -228,6 +243,40 @@ export function GallerySection() {
 
     finishSlide("center");
   };
+
+  /*
+    터치가 화살표/배경/브라우저 밖에서 끝나도
+    pointer 상태가 남지 않도록 window에서 한 번 더 정리.
+  */
+  useEffect(() => {
+    if (selectedIndex === null) {
+      return;
+    }
+
+    const clearPointerState = () => {
+      if (pointerIdRef.current === null) {
+        return;
+      }
+
+      resetPointer();
+
+      if (!isAnimating) {
+        pendingTargetRef.current = "center";
+        setIsAnimating(true);
+        setDragOffset(0);
+      }
+    };
+
+    window.addEventListener("pointerup", clearPointerState);
+    window.addEventListener("pointercancel", clearPointerState);
+    window.addEventListener("blur", clearPointerState);
+
+    return () => {
+      window.removeEventListener("pointerup", clearPointerState);
+      window.removeEventListener("pointercancel", clearPointerState);
+      window.removeEventListener("blur", clearPointerState);
+    };
+  }, [selectedIndex, isAnimating]);
 
   useEffect(() => {
     if (selectedIndex === null) {
@@ -308,13 +357,26 @@ export function GallerySection() {
           onClick={closeModal}
           role="presentation"
         >
-          <button className="modal-close" type="button" onClick={closeModal}>
+          <button
+            className="modal-close"
+            type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              closeModal();
+            }}
+          >
             ×
           </button>
 
           <button
             className="gallery-slide-button gallery-slide-prev"
             type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
             onClick={(event) => {
               event.stopPropagation();
               slidePrev();
@@ -372,6 +434,9 @@ export function GallerySection() {
           <button
             className="gallery-slide-button gallery-slide-next"
             type="button"
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
             onClick={(event) => {
               event.stopPropagation();
               slideNext();
@@ -384,6 +449,9 @@ export function GallerySection() {
           <div
             className="gallery-modal-count"
             onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+            }}
           >
             {selectedIndex + 1} / {gallery.length}
           </div>
