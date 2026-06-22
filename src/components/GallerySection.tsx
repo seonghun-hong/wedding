@@ -130,79 +130,106 @@ export function GallerySection() {
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (
-      pointerIdRef.current !== event.pointerId ||
-      startXRef.current === null ||
-      startYRef.current === null ||
-      isAnimating
-    ) {
-      return;
-    }
+const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+  if (
+    pointerIdRef.current !== event.pointerId ||
+    startXRef.current === null ||
+    startYRef.current === null ||
+    isAnimating
+  ) {
+    return;
+  }
 
-    const diffX = event.clientX - startXRef.current;
-    const diffY = event.clientY - startYRef.current;
+  const diffX = event.clientX - startXRef.current;
+  const diffY = event.clientY - startYRef.current;
 
-    const isHorizontalMove = Math.abs(diffX) > Math.abs(diffY);
+  const absX = Math.abs(diffX);
+  const absY = Math.abs(diffY);
 
-    if (!isHorizontalMove) {
-      return;
-    }
-
-    event.preventDefault();
-
-    setDragOffset(diffX);
-    latestOffsetRef.current = diffX;
-  };
-
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    if (pointerIdRef.current !== event.pointerId) {
-      return;
-    }
-
+  /*
+    세로 움직임이 더 크면 갤러리 슬라이드로 처리하지 않음.
+    이걸 안 하면 위아래 스크롤/스와이프 때 포인터가 꼬여서 멈춘 것처럼 보일 수 있음.
+  */
+  if (absY > absX && absY > 8) {
     pointerIdRef.current = null;
     startXRef.current = null;
     startYRef.current = null;
-
-    const width = window.innerWidth;
-    const threshold = Math.min(110, width * 0.25);
-    const offset = latestOffsetRef.current;
+    latestOffsetRef.current = 0;
+    setDragOffset(0);
 
     try {
       event.currentTarget.releasePointerCapture(event.pointerId);
     } catch {
-      // 이미 release 된 경우 무시
+      // 이미 해제된 경우 무시
     }
 
-    if (offset <= -threshold) {
-      finishSlide("next");
-      return;
-    }
+    return;
+  }
 
-    if (offset >= threshold) {
-      finishSlide("prev");
-      return;
-    }
+  /*
+    좌우 움직임이 확실하지 않으면 아직 처리하지 않음
+  */
+  if (absX < 8) {
+    return;
+  }
 
-    finishSlide("center");
-  };
+  event.preventDefault();
 
-  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
-    if (pointerIdRef.current !== event.pointerId) {
-      return;
-    }
+  setDragOffset(diffX);
+  latestOffsetRef.current = diffX;
+};
 
-    pointerIdRef.current = null;
-    startXRef.current = null;
-    startYRef.current = null;
+const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+  if (pointerIdRef.current !== event.pointerId) {
+    return;
+  }
 
-    finishSlide("center");
-  };
+  const offset = latestOffsetRef.current;
 
-  useEffect(() => {
-    if (selectedIndex === null) {
-      return;
-    }
+  pointerIdRef.current = null;
+  startXRef.current = null;
+  startYRef.current = null;
+
+  try {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  } catch {
+    // 이미 release 된 경우 무시
+  }
+
+  const width = window.innerWidth;
+  const threshold = Math.min(110, width * 0.25);
+
+  if (offset <= -threshold) {
+    finishSlide("next");
+    return;
+  }
+
+  if (offset >= threshold) {
+    finishSlide("prev");
+    return;
+  }
+
+  finishSlide("center");
+};
+
+const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {
+  if (pointerIdRef.current !== event.pointerId) {
+    return;
+  }
+
+  pointerIdRef.current = null;
+  startXRef.current = null;
+  startYRef.current = null;
+  latestOffsetRef.current = 0;
+
+  try {
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  } catch {
+    // 이미 release 된 경우 무시
+  }
+
+  finishSlide("center");
+};
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
