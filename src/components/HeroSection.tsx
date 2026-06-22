@@ -69,7 +69,7 @@ export function HeroSection() {
         type="button"
         onClick={scrollToNextSection}
       >
-        <span>아래로 내려주세요</span>
+        <span>우리의 이야기 보기</span>
         <em>⌄</em>
       </button>
     </section>
