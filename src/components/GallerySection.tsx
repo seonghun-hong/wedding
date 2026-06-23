@@ -12,6 +12,7 @@ import { asset } from "../lib/path";
 type SlideTarget = "prev" | "next" | "center" | null;
 
 const SLIDE_DURATION = 260;
+const PREVIEW_COUNT = 9;
 
 /*
   원본:
@@ -54,10 +55,6 @@ function LazyRender({
         }
       },
       {
-        /*
-          화면에 들어오기 전 600px 근처에서 미리 렌더링.
-          즉, 갤러리까지 스크롤하기 전부터 조금씩 준비함.
-        */
         root: null,
         rootMargin: "600px 0px",
         threshold: 0.01,
@@ -83,6 +80,7 @@ export function GallerySection() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
 
   const selectedIndexRef = useRef<number | null>(null);
   const startXRef = useRef<number | null>(null);
@@ -92,15 +90,12 @@ export function GallerySection() {
   const animatingRef = useRef(false);
   const pendingTargetRef = useRef<SlideTarget>(null);
   const animationTimerRef = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
 
   const gallery = invitation.gallery;
-
-  /*
-    처음에는 9장만 DOM 후보로 둠.
-    그리고 그 9장도 LazyRender 때문에 화면 가까이 올 때까지 img 자체는 안 생김.
-  */
-  const images = showAll ? gallery : gallery.slice(0, 9);
   const totalCount = gallery.length;
+  const hasMoreImages = totalCount > PREVIEW_COUNT;
+  const images = showAll ? gallery : gallery.slice(0, PREVIEW_COUNT);
 
   useEffect(() => {
     selectedIndexRef.current = selectedIndex;
@@ -128,6 +123,11 @@ export function GallerySection() {
     latestOffsetRef.current = 0;
   };
 
+  const resetDraggedState = () => {
+    hasDraggedRef.current = false;
+    setHasDragged(false);
+  };
+
   const resetAnimation = () => {
     clearAnimationTimer();
     animatingRef.current = false;
@@ -142,6 +142,7 @@ export function GallerySection() {
     setSelectedIndex(index);
     resetPointer();
     resetAnimation();
+    resetDraggedState();
   };
 
   const closeModal = () => {
@@ -149,6 +150,7 @@ export function GallerySection() {
     setSelectedIndex(null);
     resetPointer();
     resetAnimation();
+    resetDraggedState();
   };
 
   const completeSlide = () => {
@@ -180,6 +182,10 @@ export function GallerySection() {
     setIsAnimating(false);
     setSelectedIndex(nextSelectedIndex);
     setDragOffset(0);
+
+    window.setTimeout(() => {
+      resetDraggedState();
+    }, 0);
   };
 
   const finishSlide = (target: Exclude<SlideTarget, null>) => {
@@ -198,6 +204,10 @@ export function GallerySection() {
 
     if (target === "prev") {
       finalOffset = width;
+    }
+
+    if (target === "center") {
+      finalOffset = 0;
     }
 
     pendingTargetRef.current = target;
@@ -229,6 +239,10 @@ export function GallerySection() {
 
     const target = event.target as HTMLElement;
 
+    /*
+      닫기 버튼, 좌우 버튼, 카운트 영역은 스와이프 시작 대상에서 제외.
+      버튼은 버튼대로 클릭되게 둔다.
+    */
     if (
       target.closest(".gallery-slide-button") ||
       target.closest(".modal-close") ||
@@ -241,6 +255,8 @@ export function GallerySection() {
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
     latestOffsetRef.current = 0;
+    hasDraggedRef.current = false;
+    setHasDragged(false);
 
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -265,10 +281,16 @@ export function GallerySection() {
     const absX = Math.abs(diffX);
     const absY = Math.abs(diffY);
 
-    if (absY > absX && absY > 8) {
+    /*
+      세로 스크롤 의도가 더 크면 스와이프 취소.
+      모달 안에서는 body overflow hidden이라 실제 스크롤은 안 되지만,
+      사용자가 세로로 움직였을 때 사진이 흔들리지 않게 하기 위함.
+    */
+    if (absY > absX && absY > 12) {
       resetPointer();
       setDragOffset(0);
       latestOffsetRef.current = 0;
+      resetDraggedState();
 
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -284,6 +306,9 @@ export function GallerySection() {
     }
 
     event.preventDefault();
+
+    hasDraggedRef.current = true;
+    setHasDragged(true);
 
     setDragOffset(diffX);
     latestOffsetRef.current = diffX;
@@ -319,6 +344,11 @@ export function GallerySection() {
 
     if (Math.abs(offset) < 8) {
       resetAnimation();
+
+      window.setTimeout(() => {
+        resetDraggedState();
+      }, 0);
+
       return;
     }
 
@@ -339,6 +369,10 @@ export function GallerySection() {
     }
 
     resetAnimation();
+
+    window.setTimeout(() => {
+      resetDraggedState();
+    }, 0);
   };
 
   useEffect(() => {
@@ -353,6 +387,7 @@ export function GallerySection() {
 
       resetPointer();
       resetAnimation();
+      resetDraggedState();
     };
 
     window.addEventListener("pointerup", clearPointerState);
@@ -415,58 +450,78 @@ export function GallerySection() {
   const nextIndex = selectedIndex !== null ? getNextIndex(selectedIndex) : null;
 
   return (
-    <section className="section gallery-section">
-      <h2 className="section-title">GALLERY</h2>
-
-      <div className="gallery-grid">
-        {images.map((src, index) => {
-          const originalIndex = gallery.indexOf(src);
-          const thumbnailSrc = getThumbnailSrc(src);
-
-          return (
-            <LazyRender
-              key={src}
-              placeholderClassName="gallery-lazy-placeholder"
-            >
-              <button
-                className="gallery-item"
-                type="button"
-                onClick={() => openModal(originalIndex)}
-              >
-                <img
-                  src={asset(thumbnailSrc)}
-                  alt={`웨딩 사진 ${index + 1}`}
-                  loading="lazy"
-                  decoding="async"
-                  /*
-                    썸네일 파일이 없으면 원본으로 fallback.
-                    처음에는 썸네일 파일 만드는 걸 추천.
-                  */
-                  onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = asset(src);
-                  }}
-                />
-              </button>
-            </LazyRender>
-          );
-        })}
+    <section className="section gallery-section" id="gallery">
+      <div className="gallery-heading">
+        <p className="gallery-script">Gallery</p>
+        <h2 className="gallery-title">갤러리</h2>
       </div>
 
-      {!showAll && gallery.length > 9 && (
+      <div className={`gallery-preview-wrap ${showAll ? "open" : ""}`}>
+        <div className="gallery-grid">
+          {images.map((src, index) => {
+            const originalIndex = gallery.indexOf(src);
+            const thumbnailSrc = getThumbnailSrc(src);
+
+            return (
+              <LazyRender
+                key={src}
+                placeholderClassName="gallery-lazy-placeholder"
+              >
+                <button
+                  className="gallery-item"
+                  type="button"
+                  onClick={() => openModal(originalIndex)}
+                  aria-label={`웨딩 사진 ${index + 1} 크게 보기`}
+                >
+                  <img
+                    src={asset(thumbnailSrc)}
+                    alt={`웨딩 사진 ${index + 1}`}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = asset(src);
+                    }}
+                  />
+                </button>
+              </LazyRender>
+            );
+          })}
+        </div>
+
+        {!showAll && hasMoreImages && <div className="gallery-bottom-fade" />}
+      </div>
+
+      {!showAll && hasMoreImages && (
         <button
-          className="primary-button gallery-more"
+          className="gallery-more-button"
           type="button"
           onClick={() => setShowAll(true)}
         >
-          더보기
+          <span className="gallery-plus">＋</span>
+          <span>사진 더 보기</span>
         </button>
       )}
 
       {selectedIndex !== null && prevIndex !== null && nextIndex !== null && (
         <div
           className="image-modal photo-viewer-modal"
-          onClick={closeModal}
+          onClick={(event) => {
+            /*
+              스와이프 직후 click 이벤트가 이어서 발생하면서
+              모달이 닫히는 걸 방지.
+            */
+            if (hasDragged || hasDraggedRef.current) {
+              event.stopPropagation();
+              return;
+            }
+
+            closeModal();
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           role="presentation"
         >
           <button
@@ -479,6 +534,7 @@ export function GallerySection() {
               event.stopPropagation();
               closeModal();
             }}
+            aria-label="사진 닫기"
           >
             ×
           </button>
@@ -500,12 +556,9 @@ export function GallerySection() {
 
           <div
             className="photo-viewer-window"
-            onClick={(event) => event.stopPropagation()}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            onPointerLeave={handlePointerCancel}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
           >
             <div
               className="photo-viewer-track"
@@ -565,7 +618,9 @@ export function GallerySection() {
 
           <div
             className="gallery-modal-count"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+            }}
             onPointerDown={(event) => {
               event.stopPropagation();
             }}
