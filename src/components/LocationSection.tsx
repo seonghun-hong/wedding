@@ -178,7 +178,7 @@ export function LocationSection() {
         </div>
 
         <div className="location-info-item">
-          <strong>🚌대절버스</strong>
+          <strong>🚌전세버스</strong>
           <p>대전-세종-공주-서울</p>
         </div>
 
