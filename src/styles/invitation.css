@@ -2837,7 +2837,7 @@ img { display: block; }
 }
 
 .gallery-section {
-  padding: 76px 22px 72px;
+  padding: 0px 22px 76px;
   background: #ffffff;
   text-align: center;
 }
@@ -2849,12 +2849,12 @@ img { display: block; }
 .gallery-script {
   margin: 0 0 6px;
   font-family: "Cormorant Garamond", "Times New Roman", serif;
-  font-size: 22px;
+  font-size: 30px;
   font-style: italic;
   font-weight: 400;
   line-height: 1;
   letter-spacing: 0.03em;
-  color: #b196d0;
+  color: #d994a6;
 }
 
 .gallery-title {
