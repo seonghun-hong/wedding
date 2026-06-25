@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
 
 type Comment = {
@@ -77,6 +78,14 @@ export function GuestbookSection() {
 
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
+  const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<Comment | null>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [toast, setToast] = useState("");
+
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   }, [totalCount]);
@@ -84,6 +93,39 @@ export function GuestbookSection() {
   const paginationItems = useMemo(() => {
     return getPaginationItems(page, totalPages);
   }, [page, totalPages]);
+
+  const showToast = (text: string) => {
+    setToast(text);
+    window.setTimeout(() => setToast(""), 1500);
+  };
+
+  const resetForm = () => {
+    setName("");
+    setMessage("");
+    setPassword("");
+  };
+
+  const closeWriteModal = () => {
+    if (loading) {
+      return;
+    }
+
+    setIsWriteModalOpen(false);
+  };
+
+  const openDeleteModal = (comment: Comment) => {
+    setDeleteTarget(comment);
+    setDeletePassword("");
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) {
+      return;
+    }
+
+    setDeleteTarget(null);
+    setDeletePassword("");
+  };
 
   const loadComments = async (targetPage = page) => {
     if (!hasSupabaseConfig) {
@@ -106,6 +148,7 @@ export function GuestbookSection() {
 
     if (error) {
       console.error("방명록 불러오기 실패:", error);
+      showToast("메시지를 불러오지 못했습니다.");
       return;
     }
 
@@ -120,27 +163,27 @@ export function GuestbookSection() {
     const trimmedPassword = password.trim();
 
     if (!trimmedName) {
-      alert("이름을 입력해주세요.");
+      showToast("이름을 입력해주세요.");
       return;
     }
 
     if (!trimmedMessage) {
-      alert("축하 메시지를 입력해주세요.");
+      showToast("축하 메시지를 입력해주세요.");
       return;
     }
 
     if (!trimmedPassword) {
-      alert("삭제할 때 사용할 비밀번호를 입력해주세요.");
+      showToast("삭제용 비밀번호를 입력해주세요.");
       return;
     }
 
     if (trimmedPassword.length < 4) {
-      alert("비밀번호는 4자리 이상 입력해주세요.");
+      showToast("비밀번호는 4자리 이상 입력해주세요.");
       return;
     }
 
     if (!hasSupabaseConfig) {
-      alert("Supabase 연결 정보가 아직 설정되지 않았습니다.");
+      showToast("Supabase 연결 정보가 설정되지 않았습니다.");
       return;
     }
 
@@ -159,47 +202,55 @@ export function GuestbookSection() {
 
     if (error) {
       console.error("방명록 저장 실패:", error);
-      alert("메시지 저장 중 오류가 발생했습니다.");
+      showToast("메시지 저장 중 오류가 발생했습니다.");
       return;
     }
 
-    setName("");
-    setMessage("");
-    setPassword("");
+    resetForm();
+    setIsWriteModalOpen(false);
 
     setPage(1);
     await loadComments(1);
 
-    alert("축하 메시지가 등록되었습니다.");
+    showToast("축하 메시지가 등록되었습니다.");
   };
 
-  const removeComment = async (commentId: string) => {
-    const inputPassword = window.prompt("댓글 작성 시 입력한 비밀번호를 입력해주세요.");
+  const removeComment = async () => {
+    if (!deleteTarget) {
+      return;
+    }
 
-    if (!inputPassword) {
+    const trimmedPassword = deletePassword.trim();
+
+    if (!trimmedPassword) {
+      showToast("비밀번호를 입력해주세요.");
       return;
     }
 
     if (!hasSupabaseConfig) {
-      alert("Supabase 연결 정보가 아직 설정되지 않았습니다.");
+      showToast("Supabase 연결 정보가 설정되지 않았습니다.");
       return;
     }
 
-    const passwordHash = await createPasswordHash(inputPassword.trim());
+    setDeleteLoading(true);
+
+    const passwordHash = await createPasswordHash(trimmedPassword);
 
     const { data, error } = await supabase.rpc("hide_comment_by_password", {
-      p_id: commentId,
+      p_id: deleteTarget.id,
       p_password_hash: passwordHash,
     });
 
+    setDeleteLoading(false);
+
     if (error) {
       console.error("댓글 삭제 실패:", error);
-      alert("댓글 삭제 중 오류가 발생했습니다.");
+      showToast("메시지 삭제 중 오류가 발생했습니다.");
       return;
     }
 
     if (!data) {
-      alert("비밀번호가 일치하지 않습니다.");
+      showToast("비밀번호가 일치하지 않습니다.");
       return;
     }
 
@@ -207,10 +258,13 @@ export function GuestbookSection() {
     const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / PAGE_SIZE));
     const nextPage = Math.min(page, nextTotalPages);
 
+    setDeleteTarget(null);
+    setDeletePassword("");
+
     setPage(nextPage);
     await loadComments(nextPage);
 
-    alert("댓글이 삭제되었습니다.");
+    showToast("메시지가 삭제되었습니다.");
   };
 
   const movePage = async (nextPage: number) => {
@@ -237,47 +291,37 @@ export function GuestbookSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isWriteModalOpen && !deleteTarget) {
+      return;
+    }
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isWriteModalOpen, deleteTarget]);
+
   return (
-    <section className="section guestbook">
-      <h2 className="korean-title">축하 메시지</h2>
+    <section className="section guestbook-section">
+      <div className="guestbook-heading">
+        <p className="guestbook-script">Guestbook</p>
+        <h2 className="guestbook-title">축하 메시지</h2>
+      </div>
 
       <p className="guestbook-desc">
         신랑 신부에게 따뜻한 축하 메시지를 남겨주세요.
       </p>
 
-      <div className="message-form">
-        <div className="guestbook-input-row">
-          <input
-            value={name}
-            maxLength={20}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="이름"
-          />
-
-          <input
-            value={password}
-            maxLength={20}
-            type="password"
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="비밀번호"
-          />
-        </div>
-
-        <textarea
-          value={message}
-          maxLength={300}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="축하 메시지를 남겨주세요."
-        />
-
-        <p className="password-guide">
-          비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
-        </p>
-
-        <button className="primary-button" onClick={submit} disabled={loading}>
-          {loading ? "등록 중..." : "등록하기"}
-        </button>
-      </div>
+      <button
+        className="guestbook-write-button"
+        type="button"
+        onClick={() => setIsWriteModalOpen(true)}
+      >
+        메시지 남기기
+      </button>
 
       {!hasSupabaseConfig && (
         <p className="guestbook-warning">
@@ -310,7 +354,8 @@ export function GuestbookSection() {
 
                   <button
                     className="message-delete-button"
-                    onClick={() => removeComment(comment.id)}
+                    type="button"
+                    onClick={() => openDeleteModal(comment)}
                   >
                     삭제
                   </button>
@@ -321,6 +366,7 @@ export function GuestbookSection() {
                 {isLongMessage && (
                   <button
                     className="message-more-button"
+                    type="button"
                     onClick={() => toggleExpand(comment.id)}
                   >
                     {isExpanded ? "접기" : "더보기"}
@@ -336,6 +382,7 @@ export function GuestbookSection() {
         <div className="pagination">
           <button
             className="pagination-arrow"
+            type="button"
             onClick={() => movePage(page - 1)}
             disabled={page === 1}
           >
@@ -351,6 +398,7 @@ export function GuestbookSection() {
               ) : (
                 <button
                   key={item}
+                  type="button"
                   className={item === page ? "active" : ""}
                   onClick={() => movePage(item)}
                 >
@@ -362,6 +410,7 @@ export function GuestbookSection() {
 
           <button
             className="pagination-arrow"
+            type="button"
             onClick={() => movePage(page + 1)}
             disabled={page === totalPages}
           >
@@ -369,6 +418,129 @@ export function GuestbookSection() {
           </button>
         </div>
       )}
+
+      {isWriteModalOpen && (
+        <div className="guestbook-modal-overlay" onClick={closeWriteModal}>
+          <div
+            className="guestbook-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="guestbook-modal-close"
+              type="button"
+              onClick={closeWriteModal}
+              aria-label="닫기"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="guestbook-modal-heading">
+              <p className="guestbook-modal-script">Message</p>
+              <h3>축하 메시지 남기기</h3>
+            </div>
+
+            <div className="message-form guestbook-modal-form">
+              <div className="guestbook-input-row">
+                <input
+                  value={name}
+                  maxLength={20}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="이름"
+                />
+
+                <input
+                  value={password}
+                  maxLength={20}
+                  type="password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="비밀번호"
+                />
+              </div>
+
+              <textarea
+                value={message}
+                maxLength={300}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="축하 메시지를 남겨주세요."
+              />
+
+              <p className="password-guide">
+                비밀번호는 나중에 본인 댓글을 삭제할 때만 사용됩니다.
+              </p>
+
+              <button
+                className="primary-button guestbook-submit-button"
+                type="button"
+                onClick={submit}
+                disabled={loading}
+              >
+                {loading ? "등록 중..." : "등록하기"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="guestbook-modal-overlay" onClick={closeDeleteModal}>
+          <div
+            className="guestbook-delete-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="guestbook-modal-close"
+              type="button"
+              onClick={closeDeleteModal}
+              aria-label="닫기"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="guestbook-modal-heading">
+              <p className="guestbook-modal-script">Delete</p>
+              <h3>메시지 삭제</h3>
+            </div>
+
+            <p className="guestbook-delete-desc">
+              <b>{deleteTarget.name}</b>님의 메시지를 삭제하려면
+              <br />
+              작성 시 입력한 비밀번호를 입력해주세요.
+            </p>
+
+            <input
+              className="guestbook-delete-input"
+              value={deletePassword}
+              type="password"
+              maxLength={20}
+              onChange={(event) => setDeletePassword(event.target.value)}
+              placeholder="비밀번호"
+              autoFocus
+            />
+
+            <div className="guestbook-delete-actions">
+              <button
+                className="guestbook-delete-cancel"
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleteLoading}
+              >
+                취소
+              </button>
+
+              <button
+                className="guestbook-delete-confirm"
+                type="button"
+                onClick={removeComment}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? "삭제 중..." : "삭제하기"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && <div className="toast">{toast}</div>}
     </section>
   );
 }
