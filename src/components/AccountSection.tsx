@@ -2,14 +2,19 @@ import { useState } from "react";
 import { Copy } from "lucide-react";
 import { BankAccount, invitation } from "../data/invitation";
 import { copyText } from "../lib/clipboard";
+import { Toast } from "./Toast";
 
 export function AccountSection() {
   const [toast, setToast] = useState("");
 
+  const showToast = (message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 1500);
+  };
+
   const copy = async (account: BankAccount) => {
     await copyText(account.account);
-    setToast("계좌번호가 복사되었습니다.");
-    window.setTimeout(() => setToast(""), 1500);
+    showToast("계좌번호가 복사되었습니다.");
   };
 
   return (
@@ -31,7 +36,7 @@ export function AccountSection() {
         onCopy={copy}
       />
 
-      {toast && <div className="toast">{toast}</div>}
+      <Toast message={toast} />
     </section>
   );
 }
