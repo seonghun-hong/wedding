@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400&display=swap");
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
 :root {
@@ -3357,3 +3358,197 @@ img {
     letter-spacing: 0.03em !important;
   }
 }
+
+/* =========================================================
+   ACCOUNT SECTION - Gallery / Calendar / Location 스타일 통일
+   이 블록은 기존 Account 스타일보다 아래에 있어야 적용됩니다.
+========================================================= */
+
+.account-section {
+  --account-accent: #d994a6;
+  --account-accent-light: #f7dfe5;
+  --account-text: #3d4750;
+  --account-muted: #7b8494;
+  --account-line: rgba(217, 148, 166, 0.45);
+
+  padding: 0 22px 74px !important;
+  background: #ffffff !important;
+  text-align: center !important;
+}
+
+.account-section .section-title {
+  display: none !important;
+}
+
+.account-heading {
+  margin-bottom: 42px !important;
+  text-align: center !important;
+}
+
+.account-script {
+  margin: 0 0 6px !important;
+  font-family: "Cormorant Garamond", "Times New Roman", serif !important;
+  font-size: 30px !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.03em !important;
+  color: var(--account-accent) !important;
+}
+
+.account-title {
+  margin: 0 !important;
+  color: #1f1f1f !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.account-group {
+  width: 100% !important;
+  max-width: 560px !important;
+  margin: 0 auto 24px !important;
+  padding-bottom: 24px !important;
+  border-bottom: 1px solid var(--account-line) !important;
+  text-align: left !important;
+}
+
+.account-group:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+.account-header {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--account-text) !important;
+  padding: 0 2px 20px !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.05em !important;
+}
+
+.chevron {
+  color: var(--account-accent) !important;
+  font-size: 24px !important;
+  font-weight: 300 !important;
+  line-height: 1 !important;
+}
+
+.account-cards {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.account-card {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 14px !important;
+  min-height: 86px !important;
+  border-radius: 10px !important;
+  background: #fbf8f7 !important;
+  border: 1px solid #f0e4e1 !important;
+  padding: 18px !important;
+}
+
+.account-card b {
+  display: block !important;
+  margin-bottom: 9px !important;
+  color: #1f1f1f !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.account-card p {
+  margin: 0 !important;
+  color: var(--account-text) !important;
+  font-size: 14px !important;
+  font-weight: 300 !important;
+  line-height: 1.7 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.account-number {
+  color: var(--account-muted) !important;
+  font-variant-numeric: tabular-nums !important;
+  font-feature-settings: "tnum" 1 !important;
+}
+
+.copy-btn {
+  flex: 0 0 auto !important;
+  width: 42px !important;
+  height: 42px !important;
+  border: 1px solid #ead8d4 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--account-accent) !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.copy-btn:active {
+  transform: scale(0.96) !important;
+}
+
+/* =========================================================
+   SECTION SCRIPT TITLE COMMON STYLE
+   Wedding Invitation / Gallery / Calendar / Location / Account 통일
+========================================================= */
+
+.intro-eng,
+.gallery-script,
+.calendar-script,
+.location-script,
+.account-script {
+  font-family: "Cormorant Garamond", "Times New Roman", serif !important;
+  font-size: 30px !important;
+  font-style: italic !important;
+  font-weight: 400 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.03em !important;
+  color: #d994a6 !important;
+}
+
+.gallery-title,
+.calendar-title,
+.location-title,
+.account-title {
+  margin: 0 !important;
+  color: #1f1f1f !important;
+  font-size: 18px !important;
+  font-weight: 400 !important;
+  line-height: 1.4 !important;
+  letter-spacing: -0.04em !important;
+}
+
+@media (max-width: 480px) {
+  .account-section {
+    padding: 0 22px 74px !important;
+  }
+
+  .account-heading {
+    margin-bottom: 4px !important;
+  }
+
+  .account-script {
+    font-size: 30px !important;
+  }
+
+  .account-title {
+    font-size: 18px !important;
+  }
+
+  .account-group {
+    margin-bottom: 24px !important;
+    padding-bottom: 24px !important;
+  }
+}
+
