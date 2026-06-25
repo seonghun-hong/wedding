@@ -73,30 +73,34 @@ export function FooterSection() {
 
   return (
     <footer className="footer-section">
-      <div className="footer-buttons">
-        <button
-          className="footer-btn kakao-share"
-          type="button"
-          onClick={kakaoShare}
-        >
-          <Share2 size={28} />
-          <span>카카오톡</span>
-        </button>
+<div className="footer-buttons">
+  <button
+    className="footer-btn kakao-share"
+    type="button"
+    onClick={kakaoShare}
+  >
+    <Share2 size={28} />
+    <span>카카오톡</span>
+  </button>
 
-        <button className="footer-btn" type="button" onClick={copyLink}>
-          <Copy size={28} />
-          <span>링크복사</span>
-        </button>
+  <button
+    className="footer-btn copy-share"
+    type="button"
+    onClick={copyLink}
+  >
+    <Copy size={28} />
+    <span>링크복사</span>
+  </button>
 
-        <button
-          className="footer-btn calendar-share"
-          type="button"
-          onClick={saveCalendar}
-        >
-          <CalendarDays size={28} />
-          <span>캘린더</span>
-        </button>
-      </div>
+  <button
+    className="footer-btn calendar-share"
+    type="button"
+    onClick={saveCalendar}
+  >
+    <CalendarDays size={28} />
+    <span>캘린더</span>
+  </button>
+</div>
 
       {toast && <div className="toast">{toast}</div>}
 
