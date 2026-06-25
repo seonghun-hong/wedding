@@ -7,8 +7,8 @@ export function IntroSection() {
 
   return (
     <section className="section intro-section">
-      <div className="intro-icon" />
-      <p className="intro-eng">💍 WEDDING INVITATION</p>
+      <div className="intro-icon">💍</div>
+      <p className="intro-eng">WEDDING INVITATION</p>
 
       <h1 className="couple-name">
         {invitation.groom.name} · {invitation.bride.name}
