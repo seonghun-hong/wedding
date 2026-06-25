@@ -329,15 +329,16 @@ export function PhotoUploadSection() {
 
   return (
     <section className="section upload-entry-section">
-      <div className="upload-entry-top-line" />
+      <div className="upload-entry-heading">
+        <p className="upload-entry-script">Photo Share</p>
+        <h2 className="upload-entry-title">소중한 순간 공유</h2>
+      </div>
 
       <div className="upload-entry-icon-wrap">
         <div className="upload-entry-icon-circle">
           <Camera size={34} />
         </div>
       </div>
-
-      <h2 className="upload-entry-title">소중한 순간을 공유해주세요</h2>
 
       <p className="upload-entry-desc">
         결혼식 현장에서 찍은 사진들을
@@ -737,11 +738,10 @@ export function PhotoUploadPage() {
         <span>청첩장보러 가기</span>
       </button>
 
-      <div className="upload-page-emoji">📸</div>
-
-      <h2 className="upload-page-title">스냅 작가가 되어주세요!</h2>
-
-      <div className="upload-page-divider" />
+      <div className="upload-page-heading">
+        <p className="upload-page-script">Photo Upload</p>
+        <h2 className="upload-page-title">스냅 작가가 되어주세요!</h2>
+      </div>
 
       <p className="upload-page-main-text">
         소중한 순간을 함께 나눠주세요.
@@ -1492,11 +1492,10 @@ export function MyPhotosPage() {
         <span>사진 업로드로 돌아가기</span>
       </button>
 
-      <div className="upload-page-emoji">🖼️</div>
-
-      <h2 className="upload-page-title">내가 공유한 사진</h2>
-
-      <div className="upload-page-divider" />
+      <div className="upload-page-heading">
+        <p className="upload-page-script">My Photos</p>
+        <h2 className="upload-page-title">내가 공유한 사진</h2>
+      </div>
 
       <p className="upload-page-main-text">
         업로드할 때 입력한 연락처와 이름으로
@@ -2183,11 +2182,10 @@ const adminStats = summaries.reduce(
         <span>청첩장보러 가기</span>
       </button>
 
-      <div className="upload-page-emoji">🔐</div>
-
-      <h2 className="upload-page-title">업로드 사진 관리자</h2>
-
-      <div className="upload-page-divider" />
+      <div className="upload-page-heading">
+        <p className="upload-page-script">Admin</p>
+        <h2 className="upload-page-title">업로드 사진 관리자</h2>
+      </div>
 
       <p className="upload-page-main-text">
         하객들이 업로드한 사진을
