@@ -4599,3 +4599,71 @@ img {
     height: 30px !important;
   }
 }
+
+@media (max-width: 420px) {
+  .guestbook-modal-overlay {
+    align-items: center !important;
+    padding: 14px !important;
+  }
+
+  .guestbook-modal {
+    width: calc(100% - 28px) !important;
+    max-height: 72vh !important;
+    border-radius: 18px !important;
+    padding: 28px 18px 20px !important;
+  }
+
+  .guestbook-modal-heading {
+    margin-bottom: 16px !important;
+  }
+
+  .guestbook-modal-script {
+    font-size: 25px !important;
+  }
+
+  .guestbook-modal-heading h3 {
+    font-size: 17px !important;
+  }
+
+  .guestbook-modal-form {
+    gap: 8px !important;
+  }
+
+  .guestbook-modal-form .guestbook-input-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .guestbook-modal-form input {
+    height: 42px !important;
+    padding: 0 12px !important;
+    font-size: 16px !important;
+  }
+
+  .guestbook-modal-form textarea {
+    min-height: 88px !important;
+    max-height: 112px !important;
+    padding: 11px 12px !important;
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+  }
+
+  .guestbook-modal-form .password-guide {
+    margin: -2px 0 4px !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
+
+  .guestbook-submit-button {
+    height: 46px !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+  }
+
+  .guestbook-modal-close {
+    right: 12px !important;
+    top: 12px !important;
+    width: 30px !important;
+    height: 30px !important;
+  }
+}
