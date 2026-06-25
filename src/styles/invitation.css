@@ -127,12 +127,22 @@ img {
   padding-top: 88px;
   padding-bottom: 78px;
 }
+.intro-icon {
+  margin: 0 0 10px;
+  font-size: 42px;
+  line-height: 1;
+  text-align: center;
+}
 
 .intro-eng {
   margin: 0 0 24px;
-  color: #6e7788;
-  font-size: 16px;
-  letter-spacing: .22em;
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+  font-size: 30px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: #d994a6;
 }
 
 .couple-name {
@@ -2916,6 +2926,10 @@ img {
 
   .dday {
     font-size: 18px !important;
+  }
+
+  .intro-eng {
+    font-size: 30px;
   }
 }
 
