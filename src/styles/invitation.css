@@ -4485,3 +4485,48 @@ img {
     margin-top: 42px;
   }
 }
+
+.toast {
+  position: fixed !important;
+  left: 50% !important;
+  bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  transform: translateX(-50%) !important;
+  z-index: 30000 !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: auto !important;
+  max-width: calc(100% - 36px) !important;
+  margin: 0 !important;
+  padding: 12px 18px !important;
+
+  border-radius: 999px !important;
+  background: rgba(17, 24, 39, 0.94) !important;
+  color: #ffffff !important;
+
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.03em !important;
+  text-align: center !important;
+  white-space: normal !important;
+
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22) !important;
+  pointer-events: none !important;
+
+  animation: toastFadeIn 0.18s ease both !important;
+}
+
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
