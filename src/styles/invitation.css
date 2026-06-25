@@ -4667,3 +4667,145 @@ img {
     height: 30px !important;
   }
 }
+
+@media (max-width: 420px) {
+  /* =========================
+     Guestbook 작성 팝업 작게
+  ========================= */
+  .guestbook-modal-overlay {
+    align-items: center !important;
+    padding: 14px !important;
+  }
+
+  .guestbook-modal {
+    width: calc(100% - 28px) !important;
+    max-height: 72vh !important;
+    border-radius: 18px !important;
+    padding: 28px 18px 20px !important;
+  }
+
+  .guestbook-modal-heading {
+    margin-bottom: 16px !important;
+  }
+
+  .guestbook-modal-script {
+    font-size: 25px !important;
+  }
+
+  .guestbook-modal-heading h3 {
+    font-size: 17px !important;
+  }
+
+  .guestbook-modal-form {
+    gap: 8px !important;
+  }
+
+  .guestbook-modal-form .guestbook-input-row {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .guestbook-modal-form input {
+    height: 42px !important;
+    padding: 0 12px !important;
+    font-size: 16px !important;
+  }
+
+  .guestbook-modal-form textarea {
+    min-height: 88px !important;
+    max-height: 112px !important;
+    padding: 11px 12px !important;
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+  }
+
+  .guestbook-modal-form .password-guide {
+    margin: -2px 0 4px !important;
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+  }
+
+  .guestbook-submit-button {
+    height: 46px !important;
+    min-height: 46px !important;
+    font-size: 15px !important;
+  }
+
+  .guestbook-modal-close {
+    right: 12px !important;
+    top: 12px !important;
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  /* =========================
+     Guestbook 삭제 팝업 작게
+  ========================= */
+  .guestbook-delete-modal {
+    width: calc(100% - 46px) !important;
+    max-width: 320px !important;
+    border-radius: 18px !important;
+    padding: 28px 18px 20px !important;
+  }
+
+  .guestbook-delete-modal .guestbook-modal-heading {
+    margin-bottom: 16px !important;
+  }
+
+  .guestbook-delete-modal .guestbook-modal-script {
+    font-size: 25px !important;
+  }
+
+  .guestbook-delete-modal .guestbook-modal-heading h3 {
+    font-size: 17px !important;
+  }
+
+  .guestbook-delete-desc {
+    margin: 0 0 16px !important;
+    font-size: 13px !important;
+    line-height: 1.6 !important;
+  }
+
+  .guestbook-delete-input {
+    height: 42px !important;
+    padding: 0 12px !important;
+    font-size: 16px !important;
+  }
+
+  .guestbook-delete-actions {
+    gap: 8px !important;
+    margin-top: 14px !important;
+  }
+
+  .guestbook-delete-cancel,
+  .guestbook-delete-confirm {
+    height: 42px !important;
+    font-size: 14px !important;
+  }
+
+  /* =========================
+     모바일 자동 확대 방지
+     사진 업로드 / 내 사진 확인 / 관리자 입력창
+  ========================= */
+  .upload-form-group input,
+  .photo-upload-form input,
+  .upload-lookup-panel input,
+  .message-form input,
+  .message-form textarea,
+  .guestbook-delete-input {
+    font-size: 16px !important;
+  }
+
+  .upload-form-group input {
+    height: auto !important;
+    padding-bottom: 14px !important;
+  }
+
+  /* 사진 업로드 페이지 버튼/입력 주변도 조금 안정화 */
+  .upload-page-section,
+  .my-photos-page-section,
+  .admin-photos-page-section {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
