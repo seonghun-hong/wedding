@@ -4984,3 +4984,52 @@ img {
     line-height: 1.4 !important;
   }
 }
+
+/* 공통 버튼 */
+.footer-btn {
+  background: #f8f6f2;
+  color: #5f5a52;
+  border: 1px solid #eee8df;
+}
+
+/* 카카오톡 공유 - 연노랑 */
+.footer-btn.kakao-share {
+  background: #fff4b8;
+  color: #5f4b00;
+  border: 1px solid #f5df7a;
+}
+
+/* 링크복사 - 연한 베이지/그레이 */
+.footer-btn.copy-share {
+  background: #f6f2ec;
+  color: #625c55;
+  border: 1px solid #e7ded3;
+}
+
+/* 캘린더 저장 - 연하늘색 */
+.footer-btn.calendar-share {
+  background: #e6f5ff;
+  color: #32627a;
+  border: 1px solid #cbe9fa;
+}
+
+.footer-btn {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.footer-btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.footer-btn.kakao-share:active {
+  background: #ffef9e;
+}
+
+.footer-btn.copy-share:active {
+  background: #eee7dd;
+}
+
+.footer-btn.calendar-share:active {
+  background: #d7efff;
+}
