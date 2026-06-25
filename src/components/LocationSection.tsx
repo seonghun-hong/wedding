@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { MapPin } from "lucide-react";
+import { Bus, ParkingCircle, TrainFront } from "lucide-react";
 import { invitation } from "../data/invitation";
 
 declare global {
@@ -10,8 +10,8 @@ declare global {
 
 const KAKAO_MAP_SCRIPT_ID = "kakao-map-sdk";
 
-const WEDDING_PLACE_NAME = "하우스오브더라움";
-const WEDDING_ADDRESS = "서울특별시 광진구 능동로 81";
+const WEDDING_PLACE_NAME = "하우스 오브 더 라움";
+const WEDDING_ADDRESS = "서울특별시 광진구 능동로 81, B1";
 const WEDDING_HALL = "벨루스홀";
 
 // 하우스오브더라움 좌표
@@ -115,19 +115,21 @@ export function LocationSection() {
   };
 
   return (
-    <section className="section location-section">
-      <div className="section-label">LOCATION</div>
-
-      <h2 className="section-title">오시는 길</h2>
-
-      <div ref={mapRef} className="kakao-map-box">
-        <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
+    <section className="section location-section" id="location">
+      <div className="location-heading">
+        <p className="location-script">Location</p>
+        <h2 className="location-title">오시는 길</h2>
       </div>
 
       <div className="location-text-box">
-        <h3 className="location-place">{WEDDING_PLACE_NAME}</h3>
+        <h3 className="location-place">
+          {WEDDING_PLACE_NAME} {WEDDING_HALL}
+        </h3>
         <p className="location-address">{WEDDING_ADDRESS}</p>
-        <p className="location-hall">{WEDDING_HALL}</p>
+      </div>
+
+      <div ref={mapRef} className="kakao-map-box">
+        <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
       </div>
 
       <div className="map-buttons">
@@ -173,18 +175,27 @@ export function LocationSection() {
 
       <div className="location-info-list">
         <div className="location-info-item">
-          <strong>🚅지하철</strong>
+          <div className="location-info-title">
+            <TrainFront size={20} />
+            <strong>지하철</strong>
+          </div>
           <p>건대입구역 5번 출구에서 도보 3분</p>
         </div>
 
         <div className="location-info-item">
-          <strong>🚌전세버스</strong>
-          <p>대전-세종-공주-서울</p>
+          <div className="location-info-title">
+            <ParkingCircle size={21} />
+            <strong>주차</strong>
+          </div>
+          <p>웨딩홀 지하 주차 가능 / 2시간 무료</p>
         </div>
 
         <div className="location-info-item">
-          <strong>🅿️주차</strong>
-          <p>웨딩홀 지하 주차 가능 / 2시간 무료</p>
+          <div className="location-info-title">
+            <Bus size={20} />
+            <strong>대절버스</strong>
+          </div>
+          <p>대전-세종-공주-서울</p>
         </div>
       </div>
     </section>
