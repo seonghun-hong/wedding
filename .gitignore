@@ -3,3 +3,7 @@ dist/
 .npm-cache/
 .env
 .DS_Store
+cloudflare-worker/wrangler.toml
+cloudflare-worker/.dev.vars
+cloudflare-worker/.wrangler/
+cloudflare-worker/.wrangler-dry-run/

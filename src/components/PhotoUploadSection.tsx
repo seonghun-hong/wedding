@@ -16,8 +16,12 @@ import {
 } from "lucide-react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
 
-const MAX_FILE_COUNT = 100;
-const MAX_FILE_SIZE = 500 * 1024 * 1024;
+const PHOTO_UPLOAD_API_URL = String(
+  import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
+).replace(/\/$/, "");
+const USE_GOOGLE_DRIVE_UPLOAD = Boolean(PHOTO_UPLOAD_API_URL);
+const MAX_FILE_COUNT = USE_GOOGLE_DRIVE_UPLOAD ? 10 : 100;
+const MAX_FILE_SIZE = (USE_GOOGLE_DRIVE_UPLOAD ? 30 : 50) * 1024 * 1024;
 const SLIDE_DURATION = 260;
 
 type UploadStatus = "waiting" | "uploading" | "success" | "error";
@@ -93,7 +97,46 @@ function getMediaType(file: File) {
 }
 
 function isAllowedFile(file: File) {
+  if (USE_GOOGLE_DRIVE_UPLOAD) {
+    const extension = getFileExtension(file.name);
+
+    return (
+      file.type.startsWith("image/") ||
+      ["avif", "heic", "heif", "jpeg", "jpg", "png", "webp"].includes(
+        extension
+      )
+    );
+  }
+
   return file.type.startsWith("image/") || file.type.startsWith("video/");
+}
+
+function getUploadContentType(file: File) {
+  if (file.type) {
+    return file.type;
+  }
+
+  const extension = getFileExtension(file.name);
+  const contentTypes: Record<string, string> = {
+    avif: "image/avif",
+    heic: "image/heic",
+    heif: "image/heif",
+    jpeg: "image/jpeg",
+    jpg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+  };
+
+  return contentTypes[extension] || "application/octet-stream";
+}
+
+async function getUploadError(response: Response) {
+  try {
+    const data = (await response.json()) as { error?: string };
+    return data.error || `업로드 실패 (${response.status})`;
+  } catch {
+    return `업로드 실패 (${response.status})`;
+  }
 }
 
 function normalizePhone(phone: string) {
@@ -437,7 +480,11 @@ export function PhotoUploadPage() {
     const allowedFiles = selectedFiles.filter(isAllowedFile);
 
     if (allowedFiles.length !== selectedFiles.length) {
-      showToast("사진 또는 동영상 파일만 업로드할 수 있습니다.");
+      showToast(
+        USE_GOOGLE_DRIVE_UPLOAD
+          ? "사진 파일만 업로드할 수 있습니다."
+          : "사진 또는 동영상 파일만 업로드할 수 있습니다."
+      );
       return;
     }
 
@@ -528,79 +575,58 @@ export function PhotoUploadPage() {
     const phoneKey = normalizePhone(trimmedPhone);
     const uploaderFolder = getUploaderFolderName(trimmedName, trimmedPhone);
 
-    const ext = getFileExtension(item.file.name);
-    const mediaType = getMediaType(item.file);
-    const fileId = crypto.randomUUID();
-    const timestamp = Date.now();
-    const safeFileName = `${timestamp}-${fileId}.${ext}`;
+    if (!USE_GOOGLE_DRIVE_UPLOAD) {
+      throw new Error("사진 업로드 서버가 설정되지 않았습니다.");
+    }
 
-    const originalFolderName = mediaType === "video" ? "videos" : "originals";
-    const storagePath = `guest/${uploaderFolder}/${originalFolderName}/${safeFileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from("wedding-photos")
-      .upload(storagePath, item.file, {
-        cacheControl: "31536000",
-        upsert: false,
-        contentType: item.file.type,
+    const response = await fetch(`${PHOTO_UPLOAD_API_URL}/upload`, {
+        method: "POST",
+        headers: {
+          "content-type": getUploadContentType(item.file),
+          "x-upload-uploader-name": encodeURIComponent(trimmedName),
+          "x-upload-uploader-phone": trimmedPhone,
+          "x-upload-name-key": encodeURIComponent(nameKey),
+          "x-upload-phone-key": phoneKey,
+          "x-upload-folder-key": uploaderFolder,
+          "x-upload-password-hash": passwordHash || "",
+          "x-upload-group-id": uploadGroupId,
+          "x-upload-original-name": encodeURIComponent(item.file.name),
+        },
+        body: item.file,
       });
 
-    if (uploadError) {
-      throw uploadError;
-    }
-
-    const { data: publicUrlData } = supabase.storage
-      .from("wedding-photos")
-      .getPublicUrl(storagePath);
-
-    let thumbnailUrl: string | null = null;
-    let thumbnailStoragePath: string | null = null;
-
-    if (mediaType === "image") {
-      const thumbnailBlob = await createImageThumbnail(item.file);
-      const thumbnailPath = `guest/${uploaderFolder}/thumbs/${timestamp}-${fileId}.webp`;
-
-      const { error: thumbnailUploadError } = await supabase.storage
-        .from("wedding-photos")
-        .upload(thumbnailPath, thumbnailBlob, {
-          cacheControl: "31536000",
-          upsert: false,
-          contentType: "image/webp",
-        });
-
-      if (thumbnailUploadError) {
-        throw thumbnailUploadError;
+      if (!response.ok) {
+        throw new Error(await getUploadError(response));
       }
 
-      const { data: thumbnailPublicUrlData } = supabase.storage
-        .from("wedding-photos")
-        .getPublicUrl(thumbnailPath);
+      const uploaded = (await response.json()) as {
+        id: string;
+        fileId: string;
+      };
 
-      thumbnailUrl = thumbnailPublicUrlData.publicUrl;
-      thumbnailStoragePath = thumbnailPath;
-    }
+      try {
+        const thumbnailBlob = await createImageThumbnail(item.file);
+        const thumbnailParams = new URLSearchParams({
+          recordId: uploaded.id,
+          originalFileId: uploaded.fileId,
+        });
+        const thumbnailResponse = await fetch(
+          `${PHOTO_UPLOAD_API_URL}/thumbnail?${thumbnailParams}`,
+          {
+            method: "POST",
+            headers: { "content-type": "image/webp" },
+            body: thumbnailBlob,
+          }
+        );
 
-    const { error: insertError } = await supabase.from("uploaded_photos").insert({
-      upload_group_id: uploadGroupId,
-      uploader_name: trimmedName,
-      uploader_phone: trimmedPhone || null,
-      uploader_name_key: nameKey,
-      uploader_phone_key: phoneKey,
-      uploader_folder_key: uploaderFolder,
-      uploader_password_hash: passwordHash,
-      photo_url: publicUrlData.publicUrl,
-      storage_path: storagePath,
-      thumbnail_url: thumbnailUrl,
-      thumbnail_storage_path: thumbnailStoragePath,
-      media_type: mediaType,
-      original_name: item.file.name,
-      file_size: item.file.size,
-      visible: true,
-    });
+        if (!thumbnailResponse.ok) {
+          console.warn("썸네일 업로드 실패:", await getUploadError(thumbnailResponse));
+        }
+      } catch (error) {
+        console.warn("썸네일 생성 실패, 원본 업로드는 유지합니다:", error);
+      }
 
-    if (insertError) {
-      throw insertError;
-    }
+    return;
   };
 
   const uploadFiles = async () => {
@@ -619,7 +645,11 @@ export function PhotoUploadPage() {
     }
 
     if (files.length === 0) {
-      showToast("업로드할 사진 또는 동영상을 선택해주세요.");
+      showToast(
+        USE_GOOGLE_DRIVE_UPLOAD
+          ? "업로드할 사진을 선택해주세요."
+          : "업로드할 사진 또는 동영상을 선택해주세요."
+      );
       return;
     }
 
@@ -681,6 +711,9 @@ export function PhotoUploadPage() {
       } catch (error) {
         console.error("파일 업로드 실패:", error);
 
+        const errorMessage =
+          error instanceof Error ? error.message : "업로드 실패";
+
         failCount += 1;
 
         setUploadProgress((prev) => ({
@@ -691,10 +724,12 @@ export function PhotoUploadPage() {
         setFiles((prev) =>
           prev.map((fileItem) =>
             fileItem.id === item.id
-              ? { ...fileItem, status: "error", errorMessage: "업로드 실패" }
+              ? { ...fileItem, status: "error", errorMessage }
               : fileItem
           )
         );
+
+        showToast(errorMessage);
       }
     }
 
@@ -839,7 +874,11 @@ export function PhotoUploadPage() {
           }}
         >
           <Plus size={40} strokeWidth={1.4} />
-          <p>사진 또는 동영상을 선택하거나 드래그해서 올려주세요</p>
+          <p>
+            {USE_GOOGLE_DRIVE_UPLOAD
+              ? "원본 사진을 선택하거나 드래그해서 올려주세요"
+              : "사진 또는 동영상을 선택하거나 드래그해서 올려주세요"}
+          </p>
         </div>
 
         <input
@@ -847,7 +886,7 @@ export function PhotoUploadPage() {
           type="file"
           multiple
           hidden
-          accept="image/*,video/*"
+          accept={USE_GOOGLE_DRIVE_UPLOAD ? "image/*" : "image/*,video/*"}
           onChange={handleInputFiles}
           disabled={uploading}
         />
@@ -855,6 +894,7 @@ export function PhotoUploadPage() {
         <div className="upload-limit-guide">
           <p>• 한 번에 최대 {MAX_FILE_COUNT}개까지 업로드하실 수 있습니다</p>
           <p>• 업로드 가능한 파일 크기는 개당 {formatFileSize(MAX_FILE_SIZE)} 이하입니다</p>
+          {USE_GOOGLE_DRIVE_UPLOAD && <p>• 사진은 화질 저하 없이 원본으로 보관됩니다</p>}
         </div>
       </div>
 
