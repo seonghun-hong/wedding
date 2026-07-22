@@ -6,6 +6,7 @@ const projectRoot = process.cwd();
 
 const galleryDir = path.join(projectRoot, "public", "images", "gallery");
 const thumbsDir = path.join(galleryDir, "thumbs");
+const optimizedDir = path.join(galleryDir, "optimized");
 
 const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -20,6 +21,7 @@ async function fileExists(filePath) {
 
 async function generateThumbnails() {
   await fs.mkdir(thumbsDir, { recursive: true });
+  await fs.mkdir(optimizedDir, { recursive: true });
 
   const files = await fs.readdir(galleryDir);
 
@@ -43,29 +45,51 @@ async function generateThumbnails() {
     const name = path.basename(file, ext);
 
     const inputPath = path.join(galleryDir, file);
-    const outputPath = path.join(thumbsDir, `${name}.webp`);
+    const thumbnailPath = path.join(thumbsDir, `${name}.webp`);
+    const optimizedPath = path.join(optimizedDir, `${name}.webp`);
 
-    const alreadyExists = await fileExists(outputPath);
+    const thumbnailExists = await fileExists(thumbnailPath);
 
-    if (alreadyExists) {
+    if (thumbnailExists) {
       console.log(`Skip: ${file} -> thumbs/${name}.webp already exists`);
+    } else {
+      await sharp(inputPath)
+        .rotate()
+        .resize({
+          width: 500,
+          height: 500,
+          fit: "cover",
+          position: "center",
+        })
+        .webp({
+          quality: 72,
+        })
+        .toFile(thumbnailPath);
+
+      console.log(`Created: ${file} -> thumbs/${name}.webp`);
+    }
+
+    const optimizedExists = await fileExists(optimizedPath);
+
+    if (optimizedExists) {
+      console.log(`Skip: ${file} -> optimized/${name}.webp already exists`);
       continue;
     }
 
     await sharp(inputPath)
       .rotate()
       .resize({
-        width: 500,
-        height: 500,
-        fit: "cover",
-        position: "center",
+        width: 1600,
+        height: 1600,
+        fit: "inside",
+        withoutEnlargement: true,
       })
       .webp({
-        quality: 72,
+        quality: 78,
       })
-      .toFile(outputPath);
+      .toFile(optimizedPath);
 
-    console.log(`Created: ${file} -> thumbs/${name}.webp`);
+    console.log(`Created: ${file} -> optimized/${name}.webp`);
   }
 }
 

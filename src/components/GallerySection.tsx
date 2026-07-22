@@ -31,6 +31,15 @@ function getThumbnailSrc(src: string) {
   return `${folder}/thumbs/${fileNameWithoutExt}.webp`;
 }
 
+function getOptimizedImageSrc(src: string) {
+  const lastSlashIndex = src.lastIndexOf("/");
+  const folder = src.slice(0, lastSlashIndex);
+  const fileName = src.slice(lastSlashIndex + 1);
+  const fileNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+
+  return `${folder}/optimized/${fileNameWithoutExt}.webp`;
+}
+
 function LazyRender({
   children,
   placeholderClassName,
@@ -114,7 +123,7 @@ export function GallerySection() {
   };
 
   const preloadGalleryImage = (index: number) => {
-    const src = asset(gallery[index]);
+    const src = asset(getOptimizedImageSrc(gallery[index]));
 
     if (preloadedImageSetRef.current.has(src)) {
       return Promise.resolve();
@@ -661,7 +670,7 @@ export function GallerySection() {
             >
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(gallery[prevIndex])}
+                  src={asset(getOptimizedImageSrc(gallery[prevIndex]))}
                   alt={`이전 사진 ${prevIndex + 1}`}
                   draggable={false}
                   loading="eager"
@@ -671,7 +680,7 @@ export function GallerySection() {
 
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(gallery[selectedIndex])}
+                  src={asset(getOptimizedImageSrc(gallery[selectedIndex]))}
                   alt={`확대 사진 ${selectedIndex + 1}`}
                   draggable={false}
                   loading="eager"
@@ -681,7 +690,7 @@ export function GallerySection() {
 
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(gallery[nextIndex])}
+                  src={asset(getOptimizedImageSrc(gallery[nextIndex]))}
                   alt={`다음 사진 ${nextIndex + 1}`}
                   draggable={false}
                   loading="eager"
