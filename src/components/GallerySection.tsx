@@ -13,6 +13,7 @@ type SlideTarget = "prev" | "next" | "center" | null;
 
 const SLIDE_DURATION = 260;
 const PREVIEW_COUNT = 9;
+const PREFETCH_DISTANCE = 2;
 
 /*
   원본:
@@ -91,6 +92,9 @@ export function GallerySection() {
   const pendingTargetRef = useRef<SlideTarget>(null);
   const animationTimerRef = useRef<number | null>(null);
   const hasDraggedRef = useRef(false);
+  const preparingSlideRef = useRef(false);
+  const slideRequestIdRef = useRef(0);
+  const preloadedImageSetRef = useRef<Set<string>>(new Set());
 
   const gallery = invitation.gallery;
   const totalCount = gallery.length;
@@ -107,6 +111,62 @@ export function GallerySection() {
 
   const getNextIndex = (index: number) => {
     return index === totalCount - 1 ? 0 : index + 1;
+  };
+
+  const preloadGalleryImage = (index: number) => {
+    const src = asset(gallery[index]);
+
+    if (preloadedImageSetRef.current.has(src)) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      const image = new Image();
+
+      const markLoaded = async () => {
+        try {
+          if (typeof image.decode === "function") {
+            await image.decode();
+          }
+        } catch {
+          // 이미지가 이미 로드됐지만 decode가 실패하는 일부 모바일 브라우저는 그대로 진행합니다.
+        }
+
+        preloadedImageSetRef.current.add(src);
+        resolve();
+      };
+
+      image.onload = () => {
+        void markLoaded();
+      };
+
+      image.onerror = () => {
+        resolve();
+      };
+
+      image.src = src;
+
+      if (image.complete) {
+        void markLoaded();
+      }
+    });
+  };
+
+  const preloadAroundIndex = (index: number) => {
+    const indexes = new Set<number>([index]);
+    let prev = index;
+    let next = index;
+
+    for (let step = 0; step < PREFETCH_DISTANCE; step += 1) {
+      prev = getPrevIndex(prev);
+      next = getNextIndex(next);
+      indexes.add(prev);
+      indexes.add(next);
+    }
+
+    indexes.forEach((imageIndex) => {
+      void preloadGalleryImage(imageIndex);
+    });
   };
 
   const clearAnimationTimer = () => {
@@ -130,6 +190,8 @@ export function GallerySection() {
 
   const resetAnimation = () => {
     clearAnimationTimer();
+    slideRequestIdRef.current += 1;
+    preparingSlideRef.current = false;
     animatingRef.current = false;
     pendingTargetRef.current = null;
     setIsAnimating(false);
@@ -138,14 +200,17 @@ export function GallerySection() {
   };
 
   const openModal = (index: number) => {
+    slideRequestIdRef.current += 1;
     selectedIndexRef.current = index;
     setSelectedIndex(index);
+    preloadAroundIndex(index);
     resetPointer();
     resetAnimation();
     resetDraggedState();
   };
 
   const closeModal = () => {
+    slideRequestIdRef.current += 1;
     selectedIndexRef.current = null;
     setSelectedIndex(null);
     resetPointer();
@@ -188,11 +253,34 @@ export function GallerySection() {
     }, 0);
   };
 
-  const finishSlide = (target: Exclude<SlideTarget, null>) => {
+  const finishSlide = async (target: Exclude<SlideTarget, null>) => {
     const currentIndex = selectedIndexRef.current;
 
-    if (currentIndex === null || animatingRef.current) {
+    if (
+      currentIndex === null ||
+      animatingRef.current ||
+      preparingSlideRef.current
+    ) {
       return;
+    }
+
+    const requestId = slideRequestIdRef.current + 1;
+    slideRequestIdRef.current = requestId;
+
+    if (target !== "center") {
+      const targetIndex =
+        target === "next" ? getNextIndex(currentIndex) : getPrevIndex(currentIndex);
+
+      preparingSlideRef.current = true;
+      await preloadGalleryImage(targetIndex);
+      preparingSlideRef.current = false;
+
+      if (
+        slideRequestIdRef.current !== requestId ||
+        selectedIndexRef.current !== currentIndex
+      ) {
+        return;
+      }
     }
 
     const width = window.innerWidth;
@@ -379,6 +467,8 @@ export function GallerySection() {
     if (selectedIndex === null) {
       return;
     }
+
+    preloadAroundIndex(selectedIndex);
 
     const clearPointerState = () => {
       if (pointerIdRef.current === null) {

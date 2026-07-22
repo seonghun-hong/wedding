@@ -1867,6 +1867,7 @@ img {
   flex-direction: row !important;
   align-items: center !important;
   will-change: transform !important;
+  backface-visibility: hidden !important;
 }
 
 .photo-viewer-panel {
@@ -1889,6 +1890,8 @@ img {
   border-radius: 12px !important;
   background: #000000 !important;
   display: block !important;
+  backface-visibility: hidden !important;
+  transform: translateZ(0);
   -webkit-user-drag: none !important;
   user-select: none !important;
   pointer-events: none !important;
