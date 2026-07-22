@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Download } from "lucide-react";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
 
 type RsvpItem = {
@@ -63,6 +63,11 @@ function getMealLabel(meal: RsvpItem["meal"]) {
   return "식사 미정";
 }
 
+function escapeCsvCell(value: unknown) {
+  const text = String(value ?? "");
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 export function AdminRsvpPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [items, setItems] = useState<RsvpItem[]>([]);
@@ -109,6 +114,61 @@ export function AdminRsvpPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const downloadCsv = () => {
+    if (items.length === 0) return;
+
+    const headers = [
+      "성함",
+      "구분",
+      "참석 여부",
+      "참석 인원",
+      "식사",
+      "대절버스",
+      "탑승 장소",
+      "응답 시간",
+    ];
+    const rows = items.map((item) => {
+      const attending = item.attendance_status === "attending";
+      return [
+        item.name || "",
+        getSideLabel(item.side),
+        attending ? "참석" : "불참",
+        attending ? item.guest_count || 0 : 0,
+        attending ? getMealLabel(item.meal) : "-",
+        attending && item.shuttle_bus === "yes" ? "이용" : "이용 안 함",
+        attending && item.shuttle_bus === "yes" ? item.boarding_place || "" : "",
+        formatCreatedAt(item.created_at),
+      ];
+    });
+    const summaryRows = [
+      ["참석 여부 요약", "인원/건수"],
+      ["전체 답변", stats.totalResponses],
+      ["참석 응답", stats.attendingCount],
+      ["참석 인원", stats.totalGuests],
+      ["불참 응답", stats.declinedCount],
+      ["식사 인원", stats.mealYes],
+      ["대절버스 탑승 인원", stats.shuttleCount],
+      ["대전 탑승 인원", stats.daejeonCount],
+      ["세종 탑승 인원", stats.sejongCount],
+    ];
+    const csv = [...summaryRows, [], ["하객별 상세 답변"], headers, ...rows]
+      .map((row) => row.map(escapeCsvCell).join(","))
+      .join("\r\n");
+    const blob = new Blob(["\uFEFF", csv], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    anchor.href = url;
+    anchor.download = `참석여부-${date}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast("참석여부 파일을 저장했습니다.");
   };
 
   const stats = useMemo(() => {
@@ -217,6 +277,15 @@ export function AdminRsvpPage() {
               <strong>{stats.attendingCount}</strong>
             </div>
           </div>
+
+          <button
+            className="rsvp-csv-button"
+            type="button"
+            onClick={downloadCsv}
+          >
+            <Download size={17} />
+            <span>CSV 다운로드</span>
+          </button>
 
           <div className="rsvp-admin-list">
             {items.map((item, index) => {

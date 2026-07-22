@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CalendarDays, Copy, Share2 } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
 import { downloadCalendar } from "../lib/calendar";
 import { copyText } from "../lib/clipboard";
@@ -68,7 +68,11 @@ export function FooterSection() {
 
   const saveCalendar = () => {
     downloadCalendar();
-    showToast("캘린더가 저장되었습니다.");
+    showToast("일정 파일을 열어 캘린더에 추가해주세요.");
+  };
+
+  const openRsvp = () => {
+    window.dispatchEvent(new Event("wedding:open-rsvp"));
   };
 
   return (
@@ -99,6 +103,15 @@ export function FooterSection() {
   >
     <CalendarDays size={28} />
     <span>캘린더</span>
+  </button>
+
+  <button
+    className="footer-btn rsvp-share"
+    type="button"
+    onClick={openRsvp}
+  >
+    <ClipboardCheck size={28} />
+    <span>참석여부</span>
   </button>
 </div>
 

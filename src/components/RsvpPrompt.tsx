@@ -12,6 +12,7 @@ const RSVP_STORAGE_KEY = "wedding_rsvp_response";
 const RSVP_DISMISS_KEY = "wedding_rsvp_dismissed_in_session";
 
 type RsvpResponse = {
+  response_token?: string;
   name: string;
   side: GuestSide | null;
   attendance_status: AttendanceStatus;
@@ -21,6 +22,29 @@ type RsvpResponse = {
   boarding_place: string | null;
   created_at: string;
 };
+
+function createResponseToken() {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function getStoredResponse(): RsvpResponse | null {
+  try {
+    const value = localStorage.getItem(RSVP_STORAGE_KEY);
+    return value ? (JSON.parse(value) as RsvpResponse) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getBoardingPlaceValue(place: string | null): BoardingPlace {
+  if (place === "대전") return "daejeon";
+  if (place === "세종") return "sejong";
+  return "";
+}
 
 function getBoardingPlaceLabel(place: BoardingPlace) {
   if (place === "daejeon") {
@@ -68,18 +92,40 @@ export function RsvpPrompt() {
   const [shuttle, setShuttle] = useState<ShuttleOption>("no");
   const [boardingPlace, setBoardingPlace] = useState<BoardingPlace>("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [complete, setComplete] = useState(false);
   const [submittedResponse, setSubmittedResponse] = useState<RsvpResponse | null>(
     null
   );
 
-  useEffect(() => {
-    if (localStorage.getItem(RSVP_STORAGE_KEY)) {
-      return;
-    }
+  const fillForm = (response: RsvpResponse) => {
+    setStatus(response.attendance_status);
+    setName(response.name);
+    setSide(response.side || "");
+    setGuestCount(Math.max(1, response.guest_count || 1));
+    setMeal(response.meal || "undecided");
+    setShuttle(response.shuttle_bus || "no");
+    setBoardingPlace(getBoardingPlaceValue(response.boarding_place));
+    setSubmittedResponse(response);
+  };
 
-    if (sessionStorage.getItem(RSVP_DISMISS_KEY)) {
-      return;
+  useEffect(() => {
+    const storedResponse = getStoredResponse();
+
+    if (storedResponse) fillForm(storedResponse);
+
+    const openRsvp = () => {
+      const latestResponse = getStoredResponse();
+      if (latestResponse) fillForm(latestResponse);
+      setSaveError("");
+      setComplete(false);
+      setOpen(true);
+    };
+
+    window.addEventListener("wedding:open-rsvp", openRsvp);
+
+    if (storedResponse || sessionStorage.getItem(RSVP_DISMISS_KEY)) {
+      return () => window.removeEventListener("wedding:open-rsvp", openRsvp);
     }
 
     const introSection = document.querySelector(".intro-section");
@@ -106,6 +152,7 @@ export function RsvpPrompt() {
 
     return () => {
       observer.disconnect();
+      window.removeEventListener("wedding:open-rsvp", openRsvp);
     };
   }, []);
 
@@ -134,7 +181,11 @@ export function RsvpPrompt() {
         ? getBoardingPlaceLabel(boardingPlace)
         : "";
 
+    const previousResponse = getStoredResponse();
+    const responseToken =
+      previousResponse?.response_token || createResponseToken();
     const response: RsvpResponse = {
+      response_token: responseToken,
       name: name.trim(),
       side: side || null,
       attendance_status: status,
@@ -146,12 +197,25 @@ export function RsvpPrompt() {
     };
 
     setSaving(true);
+    setSaveError("");
 
     if (hasSupabaseConfig) {
-      const { error } = await supabase.from("rsvps").insert(response);
+      const { error } = await supabase.rpc("save_rsvp_response", {
+        p_response_token: responseToken,
+        p_name: response.name,
+        p_side: response.side,
+        p_attendance_status: response.attendance_status,
+        p_guest_count: response.guest_count,
+        p_meal: response.meal,
+        p_shuttle_bus: response.shuttle_bus,
+        p_boarding_place: response.boarding_place,
+      });
 
       if (error) {
         console.warn("RSVP 저장 실패:", error);
+        setSaving(false);
+        setSaveError("답변을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.");
+        return;
       }
     }
 
@@ -230,6 +294,16 @@ export function RsvpPrompt() {
 
             <button className="rsvp-done-button" type="button" onClick={() => setOpen(false)}>
               확인
+            </button>
+            <button
+              className="rsvp-edit-button"
+              type="button"
+              onClick={() => {
+                setComplete(false);
+                setSaveError("");
+              }}
+            >
+              답변 수정하기
             </button>
           </div>
         ) : (
@@ -387,6 +461,7 @@ export function RsvpPrompt() {
                 {saving ? "저장 중..." : "답변 남기기"}
               </button>
             </div>
+            {saveError && <p className="rsvp-save-error">{saveError}</p>}
           </>
         )}
       </div>

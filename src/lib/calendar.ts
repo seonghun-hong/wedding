@@ -4,6 +4,14 @@ function toIcsDate(date: Date) {
   return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
 }
 
+function escapeIcsText(value: string) {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/\r?\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+}
+
 export function downloadCalendar() {
   const start = new Date(invitation.wedding.date);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
@@ -12,21 +20,26 @@ export function downloadCalendar() {
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Wedding Invitation//KR",
+    "CALSCALE:GREGORIAN",
     "BEGIN:VEVENT",
-    `SUMMARY:${invitation.groom.name} ♥ ${invitation.bride.name} 결혼식`,
+    `UID:wedding-${invitation.wedding.year}${String(invitation.wedding.month).padStart(2, "0")}${String(invitation.wedding.day).padStart(2, "0")}@seonghun-hong.github.io`,
+    `DTSTAMP:${toIcsDate(new Date())}`,
+    `SUMMARY:${escapeIcsText(`${invitation.groom.name} ♥ ${invitation.bride.name} 결혼식`)}`,
     `DTSTART:${toIcsDate(start)}`,
     `DTEND:${toIcsDate(end)}`,
-    `LOCATION:${invitation.wedding.address}`,
-    `DESCRIPTION:${invitation.wedding.hallName} ${invitation.wedding.hallDetail}`,
+    `LOCATION:${escapeIcsText(invitation.wedding.address)}`,
+    `DESCRIPTION:${escapeIcsText(`${invitation.wedding.hallName} ${invitation.wedding.hallDetail}`)}`,
     "END:VEVENT",
     "END:VCALENDAR",
-  ].join("\n");
+  ].join("\r\n");
 
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "wedding.ics";
+  a.download = "성훈-지연-결혼식.ics";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

@@ -1715,12 +1715,12 @@ img {
 .footer-buttons {
   display: flex;
   justify-content: center;
-  gap: 16px;
+  gap: 10px;
   margin-bottom: 36px;
 }
 
 .footer-btn {
-  width: 82px;
+  width: min(82px, 21vw);
   height: 82px;
   border: 0;
   border-radius: 8px;
@@ -5091,6 +5091,12 @@ img {
   border: 1px solid #cbe9fa;
 }
 
+.footer-btn.rsvp-share {
+  background: #fff0f4;
+  color: #8f5364;
+  border: 1px solid #efccd5;
+}
+
 .footer-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
@@ -5110,6 +5116,10 @@ img {
 
 .footer-btn.calendar-share:active {
   background: #d7efff;
+}
+
+.footer-btn.rsvp-share:active {
+  background: #f9dce4;
 }
 
 .rsvp-prompt-overlay {
@@ -5359,6 +5369,25 @@ img {
   letter-spacing: -0.04em;
 }
 
+.rsvp-edit-button {
+  width: 100%;
+  height: 42px;
+  margin-top: 8px;
+  border: 1px solid #ead8d4;
+  border-radius: 10px;
+  background: #fffdfc;
+  color: #8f5364;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rsvp-save-error {
+  margin: 10px 0 0;
+  color: #b84f63;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .rsvp-admin-stats {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   margin-top: 22px !important;
@@ -5370,6 +5399,23 @@ img {
   display: grid;
   gap: 10px;
   margin: 22px auto 0;
+}
+
+.rsvp-csv-button {
+  width: 100%;
+  max-width: 560px;
+  height: 44px;
+  margin: 12px auto 0;
+  border: 1px solid #dfc4cb;
+  border-radius: 8px;
+  background: #fff7f9;
+  color: #8f5364;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .rsvp-admin-card {
