@@ -7,6 +7,7 @@ const projectRoot = process.cwd();
 const galleryDir = path.join(projectRoot, "public", "images", "gallery");
 const thumbsDir = path.join(galleryDir, "thumbs");
 const optimizedDir = path.join(galleryDir, "optimized");
+const imagesDir = path.join(projectRoot, "public", "images");
 
 const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
 
@@ -93,7 +94,31 @@ async function generateThumbnails() {
   }
 }
 
-generateThumbnails().catch((error) => {
+async function generatePageImages() {
+  const heroSource = path.join(imagesDir, "hero.jpg");
+  const heroPoster = path.join(imagesDir, "hero.webp");
+  const shareImage = path.join(imagesDir, "og-share.jpg");
+
+  if (!(await fileExists(heroPoster))) {
+    await sharp(heroSource)
+      .rotate()
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 76 })
+      .toFile(heroPoster);
+    console.log("Created: images/hero.webp");
+  }
+
+  if (!(await fileExists(shareImage))) {
+    await sharp(heroSource)
+      .rotate()
+      .resize({ width: 1200, height: 630, fit: "cover", position: "south" })
+      .jpeg({ quality: 82, progressive: true })
+      .toFile(shareImage);
+    console.log("Created: images/og-share.jpg");
+  }
+}
+
+Promise.all([generateThumbnails(), generatePageImages()]).catch((error) => {
   console.error(error);
   process.exit(1);
 });

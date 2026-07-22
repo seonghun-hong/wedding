@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Bus, ParkingCircle, TrainFront } from "lucide-react";
+import { Bus, Copy, MapPin, ParkingCircle, TrainFront } from "lucide-react";
 import { invitation } from "../data/invitation";
+import { copyText } from "../lib/clipboard";
 
 declare global {
   interface Window {
@@ -64,6 +65,7 @@ export function LocationSection() {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
+  const [toast, setToast] = useState("");
   const hasKakaoKey = Boolean(import.meta.env.VITE_KAKAO_JS_KEY);
 
   useEffect(() => {
@@ -117,6 +119,12 @@ export function LocationSection() {
 
   const open = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const copyShuttlePlace = async (place: string, address: string) => {
+    await copyText(`${place}\n${address}`);
+    setToast("탑승 장소를 복사했습니다.");
+    window.setTimeout(() => setToast(""), 1500);
   };
 
   return (
@@ -211,14 +219,68 @@ export function LocationSection() {
             <strong>대절버스</strong>
           </div>
           <p>
-            대전에서 출발하여 세종을 경유한 뒤
+            하객 여러분의 편안한 이동을 위해
             <br />
-            서울 예식장까지 운행할 예정입니다.
-            <br />
-            <span className="bus-route">대전 → 세종 → 서울 예식장</span>
+            아래 노선으로 대절버스를 왕복 운행합니다.
           </p>
+          <div className="bus-routes" aria-label="대절버스 왕복 노선">
+            <div className="bus-route">
+              <div className="bus-route-heading">
+                <span>예식장행</span>
+              </div>
+              <strong>대전 → 세종 → 서울 예식장</strong>
+            </div>
+            <div className="bus-route">
+              <div className="bus-route-heading">
+                <span>귀가행</span>
+                <time>오후 1:00 출발</time>
+              </div>
+              <strong>서울 예식장 → 세종 → 대전</strong>
+            </div>
+          </div>
+
+          <div className="shuttle-details">
+            <div className="shuttle-details-heading">
+              <strong>탑승 안내</strong>
+              {invitation.transport.shuttle.temporary && (
+                <span>임시 안내</span>
+              )}
+            </div>
+
+            {invitation.transport.shuttle.stops.map((stop) => (
+              <div className="shuttle-stop" key={stop.id}>
+                <div className="shuttle-stop-main">
+                  <span>{stop.label}</span>
+                  <strong>{stop.time}</strong>
+                </div>
+                <p>{stop.place}</p>
+                <small>{stop.address}</small>
+                <div className="shuttle-stop-actions">
+                  <button
+                    type="button"
+                    onClick={() => copyShuttlePlace(stop.place, stop.address)}
+                  >
+                    <Copy size={15} />
+                    <span>장소 복사</span>
+                  </button>
+                  <button type="button" onClick={() => open(stop.mapUrl)}>
+                    <MapPin size={15} />
+                    <span>지도 열기</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div className="shuttle-contact">{invitation.transport.shuttle.contact}</div>
+            {invitation.transport.shuttle.temporary && (
+              <p className="shuttle-temporary-note">
+                정확한 시간과 탑승 위치는 확정 후 다시 안내드리겠습니다.
+              </p>
+            )}
+          </div>
         </div>
       </div>
+      {toast && <div className="toast">{toast}</div>}
     </section>
   );
 }

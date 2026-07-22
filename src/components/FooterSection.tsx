@@ -11,7 +11,7 @@ declare global {
 }
 
 const WEDDING_URL = "https://seonghun-hong.github.io/wedding/";
-const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og.jpg";
+const KAKAO_IMAGE_URL = "https://seonghun-hong.github.io/wedding/images/og-share.jpg";
 
 export function FooterSection() {
   const [toast, setToast] = useState("");

@@ -42,6 +42,10 @@ export const invitation = {
     address: "서울특별시 광진구 능동로 81",
   },
 
+  rsvp: {
+    deadline: "2026년 9월 20일 일요일까지",
+  },
+
   intro: [
     "저희 두 사람이 하나가 되어",
     "첫 발걸음을 내딛는 시작,",
@@ -78,5 +82,27 @@ export const invitation = {
     subway: ["건대입구역 5번 출구", "도보 약 3분"],
     bus: ["이천역에서 탑승", "3번, 12번, 12-1번 탑승", "이천터미널에서 탑승", "22-3번, 22-9번 탑승"],
     parking: ["웨딩홀 지하 주차장 이용 가능", "2시간 무료 주차 제공"],
+    shuttle: {
+      temporary: true,
+      contact: "문의 연락처 추후 안내",
+      stops: [
+        {
+          id: "daejeon",
+          label: "대전",
+          time: "오전 7:40",
+          place: "대덕밸리만남의광장",
+          address: "대전 유성구 대덕대로 977",
+          mapUrl: "https://naver.me/FG7xuLxN",
+        },
+        {
+          id: "sejong",
+          label: "세종",
+          time: "오전 8:10",
+          place: "양우내안애 아스펜 견본주택 앞",
+          address: "세종특별자치시 대평동 270-10",
+          mapUrl: "https://naver.me/5mIHXqay",
+        },
+      ],
+    },
   },
 };

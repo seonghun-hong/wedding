@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, Download } from "lucide-react";
+import { ChevronLeft, Download, Search } from "lucide-react";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
 
 type RsvpItem = {
@@ -13,6 +13,15 @@ type RsvpItem = {
   boarding_place: string | null;
   created_at: string;
 };
+
+type RsvpFilter =
+  | "all"
+  | "attending"
+  | "declined"
+  | "meal"
+  | "shuttle"
+  | "daejeon"
+  | "sejong";
 
 async function createPasswordHash(password: string) {
   const encoder = new TextEncoder();
@@ -68,12 +77,22 @@ function escapeCsvCell(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function getDuplicateKey(item: RsvpItem) {
+  const normalizedName = (item.name || "")
+    .toLocaleLowerCase("ko-KR")
+    .replace(/\s+/g, "");
+
+  return normalizedName ? `${normalizedName}|${item.side || "unknown"}` : "";
+}
+
 export function AdminRsvpPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [items, setItems] = useState<RsvpItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [toast, setToast] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState<RsvpFilter>("all");
 
   const showToast = (message: string) => {
     setToast(message);
@@ -127,6 +146,7 @@ export function AdminRsvpPage() {
       "식사",
       "대절버스",
       "탑승 장소",
+      "중복 가능",
       "응답 시간",
     ];
     const rows = items.map((item) => {
@@ -139,6 +159,7 @@ export function AdminRsvpPage() {
         attending ? getMealLabel(item.meal) : "-",
         attending && item.shuttle_bus === "yes" ? "이용" : "이용 안 함",
         attending && item.shuttle_bus === "yes" ? item.boarding_place || "" : "",
+        duplicateKeys.has(getDuplicateKey(item)) ? "확인 필요" : "",
         formatCreatedAt(item.created_at),
       ];
     });
@@ -152,6 +173,7 @@ export function AdminRsvpPage() {
       ["대절버스 탑승 인원", stats.shuttleCount],
       ["대전 탑승 인원", stats.daejeonCount],
       ["세종 탑승 인원", stats.sejongCount],
+      ["중복 가능 응답", duplicateResponseCount],
     ];
     const csv = [...summaryRows, [], ["하객별 상세 답변"], headers, ...rows]
       .map((row) => row.map(escapeCsvCell).join(","))
@@ -203,6 +225,44 @@ export function AdminRsvpPage() {
         .reduce((sum, item) => sum + Number(item.guest_count || 0), 0),
     };
   }, [items]);
+
+  const duplicateKeys = useMemo(() => {
+    const counts = new Map<string, number>();
+
+    items.forEach((item) => {
+      const key = getDuplicateKey(item);
+      if (key) counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    return new Set(
+      [...counts.entries()]
+        .filter(([, count]) => count > 1)
+        .map(([key]) => key)
+    );
+  }, [items]);
+
+  const duplicateResponseCount = useMemo(
+    () =>
+      items.filter((item) => duplicateKeys.has(getDuplicateKey(item))).length,
+    [duplicateKeys, items]
+  );
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase("ko-KR");
+
+    return items.filter((item) => {
+      const matchesSearch = !query || (item.name || "").toLocaleLowerCase("ko-KR").includes(query);
+
+      if (!matchesSearch) return false;
+      if (filter === "attending") return item.attendance_status === "attending";
+      if (filter === "declined") return item.attendance_status === "declined";
+      if (filter === "meal") return item.attendance_status === "attending" && item.meal === "yes";
+      if (filter === "shuttle") return item.attendance_status === "attending" && item.shuttle_bus === "yes";
+      if (filter === "daejeon") return item.shuttle_bus === "yes" && item.boarding_place === "대전";
+      if (filter === "sejong") return item.shuttle_bus === "yes" && item.boarding_place === "세종";
+      return true;
+    });
+  }, [filter, items, searchQuery]);
 
   return (
     <section className="section admin-photos-page-section">
@@ -287,15 +347,46 @@ export function AdminRsvpPage() {
             <span>CSV 다운로드</span>
           </button>
 
+          <div className="rsvp-admin-controls">
+            <label className="rsvp-admin-search">
+              <Search size={17} />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="이름 검색"
+              />
+            </label>
+            <select
+              aria-label="참석 응답 필터"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as RsvpFilter)}
+            >
+              <option value="all">전체 응답</option>
+              <option value="attending">참석</option>
+              <option value="declined">불참</option>
+              <option value="meal">식사</option>
+              <option value="shuttle">대절버스</option>
+              <option value="daejeon">대전 탑승</option>
+              <option value="sejong">세종 탑승</option>
+            </select>
+          </div>
+
+          <p className="rsvp-filter-count">검색 결과 {filteredItems.length}건</p>
+
           <div className="rsvp-admin-list">
-            {items.map((item, index) => {
+            {filteredItems.map((item, index) => {
               const attending = item.attendance_status === "attending";
+              const duplicate = duplicateKeys.has(getDuplicateKey(item));
 
               return (
                 <div className="rsvp-admin-card" key={item.id || index}>
                   <div className="rsvp-admin-card-head">
                     <strong>{item.name || "이름 없음"}</strong>
-                    <em>{attending ? "참석" : "불참"}</em>
+                    <div className="rsvp-admin-card-badges">
+                      {duplicate && <span>중복 가능</span>}
+                      <em>{attending ? "참석" : "불참"}</em>
+                    </div>
                   </div>
 
                   <dl>
@@ -328,6 +419,10 @@ export function AdminRsvpPage() {
               );
             })}
           </div>
+
+          {filteredItems.length === 0 && (
+            <p className="upload-lookup-empty">조건에 맞는 응답이 없습니다.</p>
+          )}
         </>
       )}
 

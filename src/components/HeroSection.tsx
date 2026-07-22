@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { asset } from "../lib/path";
 
@@ -7,6 +7,21 @@ export function HeroSection() {
 
   // 자동재생 안정성을 위해 시작은 음소거
   const [muted, setMuted] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => {
+      setReduceMotion(mediaQuery.matches);
+      if (mediaQuery.matches) videoRef.current?.pause();
+    };
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
 
   const toggleMute = async () => {
     const video = videoRef.current;
@@ -57,15 +72,20 @@ export function HeroSection() {
         ref={videoRef}
         className="hero-video"
         src={asset("/videos/hero.mp4")}
-        poster={asset("/images/hero.jpg")}
-        autoPlay
+        poster={asset("/images/hero.webp")}
+        autoPlay={!reduceMotion}
         muted={muted}
-        loop
+        loop={!reduceMotion}
         playsInline
         preload="metadata"
       />
 
-      <button className="mute-button" onClick={toggleMute} type="button">
+      <button
+        className="mute-button"
+        onClick={toggleMute}
+        type="button"
+        disabled={reduceMotion}
+      >
         {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         <span>{muted ? "음소거 해제" : "음소거"}</span>
       </button>

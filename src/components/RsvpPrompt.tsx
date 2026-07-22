@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import { invitation } from "../data/invitation";
 import { hasSupabaseConfig, supabase } from "../lib/supabase";
 
 type AttendanceStatus = "attending" | "declined";
@@ -312,6 +313,9 @@ export function RsvpPrompt() {
               <p className="rsvp-script">RSVP</p>
               <h2>참석 여부를 알려주세요</h2>
               <p>귀한 걸음 준비에 참고하겠습니다.</p>
+              <span className="rsvp-deadline">
+                {invitation.rsvp.deadline} 알려주세요
+              </span>
             </div>
 
             <div className="rsvp-choice-row">
