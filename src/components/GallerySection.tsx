@@ -91,6 +91,7 @@ export function GallerySection() {
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hasDragged, setHasDragged] = useState(false);
+  const [currentImageReady, setCurrentImageReady] = useState(true);
 
   const selectedIndexRef = useRef<number | null>(null);
   const startXRef = useRef<number | null>(null);
@@ -210,6 +211,9 @@ export function GallerySection() {
 
   const openModal = (index: number) => {
     slideRequestIdRef.current += 1;
+    setCurrentImageReady(
+      preloadedImageSetRef.current.has(asset(getOptimizedImageSrc(gallery[index])))
+    );
     selectedIndexRef.current = index;
     setSelectedIndex(index);
     preloadAroundIndex(index);
@@ -222,6 +226,7 @@ export function GallerySection() {
     slideRequestIdRef.current += 1;
     selectedIndexRef.current = null;
     setSelectedIndex(null);
+    setCurrentImageReady(true);
     resetPointer();
     resetAnimation();
     resetDraggedState();
@@ -254,6 +259,7 @@ export function GallerySection() {
     latestOffsetRef.current = 0;
 
     setIsAnimating(false);
+    setCurrentImageReady(true);
     setSelectedIndex(nextSelectedIndex);
     setDragOffset(0);
 
@@ -290,6 +296,8 @@ export function GallerySection() {
       ) {
         return;
       }
+
+      setCurrentImageReady(true);
     }
 
     const width = window.innerWidth;
@@ -659,6 +667,13 @@ export function GallerySection() {
               event.stopPropagation();
             }}
           >
+            {!currentImageReady && (
+              <div className="photo-viewer-loading" aria-live="polite">
+                <span />
+                <p>사진을 불러오는 중입니다</p>
+              </div>
+            )}
+
             <div
               className="photo-viewer-track"
               style={{
@@ -685,6 +700,8 @@ export function GallerySection() {
                   draggable={false}
                   loading="eager"
                   decoding="async"
+                  onLoad={() => setCurrentImageReady(true)}
+                  onError={() => setCurrentImageReady(true)}
                 />
               </div>
 
