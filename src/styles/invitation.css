@@ -1,4 +1,4 @@
-@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+﻿@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
 :root {
   --bg: #ffffff;
@@ -501,36 +501,6 @@ img {
 
 .location-hall {
   display: none;
-}
-
-.flower-notice {
-  width: 100%;
-  max-width: 560px;
-  margin: -10px auto 30px;
-  padding: 18px 16px;
-  border: 1px solid #f0e4e1;
-  border-radius: 10px;
-  background: #fbf8f7;
-  color: var(--location-text);
-  text-align: center;
-}
-
-.flower-notice strong {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--location-accent);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
-}
-
-.flower-notice p {
-  margin: 0;
-  color: var(--location-muted);
-  font-size: 14px;
-  font-weight: 300;
-  line-height: 1.7;
-  letter-spacing: -0.04em;
 }
 
 .kakao-map-box {
@@ -3062,11 +3032,11 @@ img {
 
 /* =========================================================
    FINAL OVERRIDE
-   PC에서 보이는 간격/크기를 모바일에도 동일하게 적용
-   반드시 CSS 파일 맨 아래에 위치해야 함
+   PC?먯꽌 蹂댁씠??媛꾧꺽/?ш린瑜?紐⑤컮?쇱뿉???숈씪?섍쾶 ?곸슜
+   諛섎뱶??CSS ?뚯씪 留??꾨옒???꾩튂?댁빞 ??
 ========================================================= */
 
-/* Intro 상단 이모지 + Wedding Invitation 폰트 통일 */
+/* Intro ?곷떒 ?대え吏 + Wedding Invitation ?고듃 ?듭씪 */
 .intro-icon,
 .intro-ring {
   margin: 0 0 10px !important;
@@ -3086,7 +3056,7 @@ img {
   color: #d994a6 !important;
 }
 
-/* 모바일에서도 PC 기준 간격 그대로 사용 */
+/* 紐⑤컮?쇱뿉?쒕룄 PC 湲곗? 媛꾧꺽 洹몃?濡??ъ슜 */
 @media (max-width: 480px) {
   .page {
     max-width: 430px !important;
@@ -3331,7 +3301,7 @@ img {
   }
 }
 
-/* 380px 이하에서 다시 작아지는 기존 설정 무력화 */
+/* 380px ?댄븯?먯꽌 ?ㅼ떆 ?묒븘吏??湲곗〈 ?ㅼ젙 臾대젰??*/
 @media (max-width: 380px) {
   .section {
     padding-left: 24px !important;
@@ -3374,8 +3344,8 @@ img {
 
 /* =========================================================
    FINAL SCRIPT FONT MATCH FIX
-   Wedding Invitation과 Calendar를 같은 폰트/굵기로 고정
-   반드시 CSS 파일 맨 아래에 위치
+   Wedding Invitation怨?Calendar瑜?媛숈? ?고듃/援듦린濡?怨좎젙
+   諛섎뱶??CSS ?뚯씪 留??꾨옒???꾩튂
 ========================================================= */
 
 .intro-icon,
@@ -3429,8 +3399,8 @@ img {
 }
 
 /* =========================================================
-   ACCOUNT SECTION - Gallery / Calendar / Location 스타일 통일
-   이 블록은 기존 Account 스타일보다 아래에 있어야 적용됩니다.
+   ACCOUNT SECTION - Gallery / Calendar / Location ?ㅽ????듭씪
+   ??釉붾줉? 湲곗〈 Account ?ㅽ??쇰낫???꾨옒???덉뼱???곸슜?⑸땲??
 ========================================================= */
 
 .account-section {
@@ -3569,7 +3539,7 @@ img {
 
 /* =========================================================
    SECTION SCRIPT TITLE COMMON STYLE
-   Wedding Invitation / Gallery / Calendar / Location / Account 통일
+   Wedding Invitation / Gallery / Calendar / Location / Account ?듭씪
 ========================================================= */
 
 .intro-eng,
@@ -3624,7 +3594,7 @@ img {
 
 /* =========================================================
    GUESTBOOK POPUP / DELETE MODAL / TOAST FINAL OVERRIDE
-   작성 팝업 + 삭제 비밀번호 팝업 + 토스트 최상단 표시
+   ?묒꽦 ?앹뾽 + ??젣 鍮꾨?踰덊샇 ?앹뾽 + ?좎뒪??理쒖긽???쒖떆
 ========================================================= */
 
 .guestbook-section {
@@ -4177,7 +4147,7 @@ img {
 
 /* ================================
    Photo Upload / My Photos / Admin
-   Gallery·Calendar·Guestbook 동일 타이틀 스타일
+   Gallery쨌Calendar쨌Guestbook ?숈씪 ??댄? ?ㅽ???
    ================================ */
 
 .upload-entry-section,
@@ -4740,7 +4710,7 @@ img {
 
 @media (max-width: 420px) {
   /* =========================
-     Guestbook 작성 팝업 작게
+     Guestbook ?묒꽦 ?앹뾽 ?묎쾶
   ========================= */
   .guestbook-modal-overlay {
     align-items: center !important;
@@ -4809,7 +4779,7 @@ img {
   }
 
   /* =========================
-     Guestbook 삭제 팝업 작게
+     Guestbook ??젣 ?앹뾽 ?묎쾶
   ========================= */
   .guestbook-delete-modal {
     width: calc(100% - 46px) !important;
@@ -4854,8 +4824,8 @@ img {
   }
 
   /* =========================
-     모바일 자동 확대 방지
-     사진 업로드 / 내 사진 확인 / 관리자 입력창
+     紐⑤컮???먮룞 ?뺣? 諛⑹?
+     ?ъ쭊 ?낅줈??/ ???ъ쭊 ?뺤씤 / 愿由ъ옄 ?낅젰李?
   ========================= */
   .upload-form-group input,
   .photo-upload-form input,
@@ -4871,7 +4841,7 @@ img {
     padding-bottom: 14px !important;
   }
 
-  /* 사진 업로드 페이지 버튼/입력 주변도 조금 안정화 */
+  /* ?ъ쭊 ?낅줈???섏씠吏 踰꾪듉/?낅젰 二쇰???議곌툑 ?덉젙??*/
   .upload-page-section,
   .my-photos-page-section,
   .admin-photos-page-section {
@@ -4882,7 +4852,7 @@ img {
 
 @media (max-width: 420px) {
   /* =========================
-     Guestbook 작성 팝업 작게
+     Guestbook ?묒꽦 ?앹뾽 ?묎쾶
   ========================= */
   .guestbook-modal-overlay {
     align-items: center !important;
@@ -4951,7 +4921,7 @@ img {
   }
 
   /* =========================
-     Guestbook 삭제 팝업 작게
+     Guestbook ??젣 ?앹뾽 ?묎쾶
   ========================= */
   .guestbook-delete-modal {
     width: calc(100% - 46px) !important;
@@ -4996,8 +4966,8 @@ img {
   }
 
   /* =========================
-     모바일 자동 확대 방지
-     사진 업로드 / 내 사진 확인 / 관리자 입력창
+     紐⑤컮???먮룞 ?뺣? 諛⑹?
+     ?ъ쭊 ?낅줈??/ ???ъ쭊 ?뺤씤 / 愿由ъ옄 ?낅젰李?
   ========================= */
   .upload-form-group input,
   .photo-upload-form input,
@@ -5013,7 +4983,7 @@ img {
     padding-bottom: 14px !important;
   }
 
-  /* 사진 업로드 페이지 버튼/입력 주변도 조금 안정화 */
+  /* ?ъ쭊 ?낅줈???섏씠吏 踰꾪듉/?낅젰 二쇰???議곌툑 ?덉젙??*/
   .upload-page-section,
   .my-photos-page-section,
   .admin-photos-page-section {
@@ -5055,28 +5025,28 @@ img {
   }
 }
 
-/* 공통 버튼 */
+/* 怨듯넻 踰꾪듉 */
 .footer-btn {
   background: #f8f6f2;
   color: #5f5a52;
   border: 1px solid #eee8df;
 }
 
-/* 카카오톡 공유 - 연노랑 */
+/* 移댁뭅?ㅽ넚 怨듭쑀 - ?곕끂??*/
 .footer-btn.kakao-share {
   background: #fff4b8;
   color: #5f4b00;
   border: 1px solid #f5df7a;
 }
 
-/* 링크복사 - 연한 베이지/그레이 */
+/* 留곹겕蹂듭궗 - ?고븳 踰좎씠吏/洹몃젅??*/
 .footer-btn.copy-share {
   background: #f6f2ec;
   color: #625c55;
   border: 1px solid #e7ded3;
 }
 
-/* 캘린더 저장 - 연하늘색 */
+/* 罹섎┛?????- ?고븯?섏깋 */
 .footer-btn.calendar-share {
   background: #e6f5ff;
   color: #32627a;
@@ -5444,3 +5414,4 @@ img {
     grid-template-columns: 1fr;
   }
 }
+

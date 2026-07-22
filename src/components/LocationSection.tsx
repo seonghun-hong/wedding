@@ -133,15 +133,6 @@ export function LocationSection() {
         <p className="location-address">{WEDDING_ADDRESS}</p>
       </div>
 
-      <div className="flower-notice" aria-label="축하 화환 안내">
-        <strong>축하 화환 안내</strong>
-        <p>
-          예식장 사정으로 축하 화환은 정중히 사양합니다.
-          <br />
-          보내주시는 따뜻한 마음만 감사히 받겠습니다.
-        </p>
-      </div>
-
       <div ref={mapRef} className="kakao-map-box">
         {hasKakaoKey && !mapReady && !mapFailed && (
           <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
