@@ -3,7 +3,6 @@ const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const DEFAULT_MAX_FILE_BYTES = 30 * 1024 * 1024;
 const DEFAULT_MAX_STORAGE_BYTES = 13 * 1024 * 1024 * 1024;
-const DEFAULT_MAX_PHOTOS = 30;
 const THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/avif",
@@ -40,6 +39,7 @@ function cors(origin) {
       "x-upload-password-hash",
       "x-upload-group-id",
       "x-upload-original-name",
+      "x-admin-password-hash",
     ].join(","),
     "access-control-max-age": "86400",
     vary: "Origin",
@@ -158,16 +158,6 @@ function supabaseHeaders(env, prefer) {
   return headers;
 }
 
-async function photoCount(env, folderKey) {
-  const url = new URL(`${env.SUPABASE_URL}/rest/v1/uploaded_photos`);
-  url.searchParams.set("select", "id");
-  url.searchParams.set("uploader_folder_key", `eq.${folderKey}`);
-  url.searchParams.set("limit", String(numberSetting(env.MAX_PHOTOS_PER_UPLOADER, DEFAULT_MAX_PHOTOS) + 1));
-  const response = await fetch(url, { headers: supabaseHeaders(env) });
-  if (!response.ok) throw new Error(`업로드 수 확인 실패 (${response.status})`);
-  return (await response.json()).length;
-}
-
 async function driveUsage(env) {
   const response = await googleFetch(env, `${DRIVE_API}/about?fields=storageQuota(limit,usage)`);
   if (!response.ok) throw new Error(`Drive 용량 확인 실패 (${response.status})`);
@@ -269,7 +259,6 @@ async function originalUpload(request, env, origin) {
   const type = clean(request.headers.get("content-type"), 80).toLowerCase();
   const size = Number(request.headers.get("content-length") || 0);
   const maxFile = numberSetting(env.MAX_FILE_BYTES, DEFAULT_MAX_FILE_BYTES);
-  const maxPhotos = numberSetting(env.MAX_PHOTOS_PER_UPLOADER, DEFAULT_MAX_PHOTOS);
 
   if (!uploaderName || !originalName || !validFolderKey(folderKey) || !validUuid(groupId)) {
     return json({ error: "업로더 또는 파일 정보가 올바르지 않습니다." }, 400, cors(origin));
@@ -281,10 +270,6 @@ async function originalUpload(request, env, origin) {
   if (!Number.isFinite(size) || size <= 0 || size > maxFile) {
     return json({ error: `사진은 개당 ${Math.floor(maxFile / 1024 / 1024)}MB 이하여야 합니다.` }, 413, cors(origin));
   }
-  if ((await photoCount(env, folderKey)) >= maxPhotos) {
-    return json({ error: `한 분당 최대 ${maxPhotos}장까지 올릴 수 있습니다.` }, 429, cors(origin));
-  }
-
   const quota = await driveUsage(env);
   const configuredLimit = numberSetting(env.MAX_STORAGE_BYTES, DEFAULT_MAX_STORAGE_BYTES);
   const limit = quota.limit ? Math.min(quota.limit, configuredLimit) : configuredLimit;
@@ -405,6 +390,95 @@ async function media(request, env, id) {
   return new Response(request.method === "HEAD" ? null : response.body, { status: response.status, headers });
 }
 
+async function safeEqual(left, right) {
+  const encoder = new TextEncoder();
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(String(left || ""))),
+    crypto.subtle.digest("SHA-256", encoder.encode(String(right || ""))),
+  ]);
+  return crypto.subtle.timingSafeEqual(leftHash, rightHash);
+}
+
+async function verifyAdminPassword(env, passwordHash) {
+  const url = new URL(`${env.SUPABASE_URL}/rest/v1/app_admin_settings`);
+  url.searchParams.set("select", "value");
+  url.searchParams.set("key", "eq.upload_admin_password_hash");
+  url.searchParams.set("limit", "1");
+  const response = await fetch(url, { headers: supabaseHeaders(env) });
+  if (!response.ok) throw new Error(`관리자 설정 확인 실패 (${response.status})`);
+  const expected = (await response.json())[0]?.value || "";
+  return safeEqual(expected, passwordHash);
+}
+
+async function driveFolderStatus(env, id) {
+  const response = await googleFetch(
+    env,
+    `${DRIVE_API}/files/${id}?fields=id,name,mimeType,trashed`
+  );
+  if (!response.ok) return { ok: false, status: response.status, name: null };
+  const folder = await response.json();
+  return {
+    ok: folder.mimeType === "application/vnd.google-apps.folder" && !folder.trashed,
+    status: response.status,
+    name: folder.name || null,
+  };
+}
+
+async function photoStorageRows(env) {
+  const url = new URL(`${env.SUPABASE_URL}/rest/v1/uploaded_photos`);
+  url.searchParams.set("select", "storage_path,thumbnail_storage_path,file_size");
+  url.searchParams.set("limit", "10000");
+  const response = await fetch(url, { headers: supabaseHeaders(env) });
+  if (!response.ok) throw new Error(`사진 저장 현황 조회 실패 (${response.status})`);
+  return response.json();
+}
+
+async function adminStorageStats(request, env, origin) {
+  const passwordHash = clean(request.headers.get("x-admin-password-hash"), 64);
+  if (!/^[0-9a-f]{64}$/i.test(passwordHash)) {
+    return json({ error: "관리자 인증이 필요합니다." }, 401, cors(origin));
+  }
+  if (!(await verifyAdminPassword(env, passwordHash))) {
+    return json({ error: "관리자 비밀번호가 올바르지 않습니다." }, 403, cors(origin));
+  }
+
+  const [quota, originalsFolder, thumbnailsFolder, rows] = await Promise.all([
+    driveUsage(env),
+    driveFolderStatus(env, env.GOOGLE_DRIVE_ORIGINALS_FOLDER_ID),
+    driveFolderStatus(env, env.GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID),
+    photoStorageRows(env),
+  ]);
+  const configuredLimit = numberSetting(env.MAX_STORAGE_BYTES, DEFAULT_MAX_STORAGE_BYTES);
+  const uploadLimit = quota.limit ? Math.min(quota.limit, configuredLimit) : configuredLimit;
+  const usageBytes = Math.max(0, quota.usage || 0);
+  const driveOriginals = rows.filter((row) => String(row.storage_path || "").startsWith("gdrive:")).length;
+  const driveThumbnails = rows.filter((row) => String(row.thumbnail_storage_path || "").startsWith("gdrive:")).length;
+  const legacyFiles = rows.length - driveOriginals;
+  const guestOriginalBytes = rows.reduce((sum, row) => sum + Number(row.file_size || 0), 0);
+
+  return json({
+    storage: {
+      usageBytes,
+      accountLimitBytes: Math.max(0, quota.limit || 0),
+      uploadLimitBytes: uploadLimit,
+      remainingUploadBytes: Math.max(0, uploadLimit - usageBytes),
+      usagePercent: uploadLimit > 0 ? Math.min(100, (usageBytes / uploadLimit) * 100) : 0,
+      guestOriginalBytes,
+    },
+    files: {
+      records: rows.length,
+      driveOriginals,
+      driveThumbnails,
+      missingThumbnails: Math.max(0, driveOriginals - driveThumbnails),
+      legacyFiles,
+    },
+    folders: {
+      originals: originalsFolder,
+      thumbnails: thumbnailsFolder,
+    },
+  }, 200, cors(origin));
+}
+
 function missingSettings(env) {
   return [
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN",
@@ -432,6 +506,7 @@ export default {
     try {
       if (url.pathname === "/upload" && request.method === "POST") return await originalUpload(request, env, origin);
       if (url.pathname === "/thumbnail" && request.method === "POST") return await thumbnailUpload(request, env, origin);
+      if (url.pathname === "/admin/storage-stats" && request.method === "GET") return await adminStorageStats(request, env, origin);
       return json({ error: "Not found" }, 404, cors(origin));
     } catch (error) {
       console.error(error);

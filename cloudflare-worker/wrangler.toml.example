@@ -7,7 +7,6 @@ compatibility_date = "2026-07-01"
 ALLOWED_ORIGINS = "https://seonghun-hong.github.io,http://localhost:5173,http://127.0.0.1:5173"
 MAX_FILE_BYTES = "31457280"
 MAX_STORAGE_BYTES = "13958643712"
-MAX_PHOTOS_PER_UPLOADER = "30"
 
 # Add these with `wrangler secret put`, never in this file:
 # GOOGLE_CLIENT_ID

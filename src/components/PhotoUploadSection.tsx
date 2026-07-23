@@ -20,7 +20,7 @@ const PHOTO_UPLOAD_API_URL = String(
   import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
 ).replace(/\/$/, "");
 const USE_GOOGLE_DRIVE_UPLOAD = Boolean(PHOTO_UPLOAD_API_URL);
-const MAX_FILE_COUNT = USE_GOOGLE_DRIVE_UPLOAD ? 10 : 100;
+const MAX_FILE_COUNT = USE_GOOGLE_DRIVE_UPLOAD ? 30 : 100;
 const MAX_FILE_SIZE = (USE_GOOGLE_DRIVE_UPLOAD ? 30 : 50) * 1024 * 1024;
 const SLIDE_DURATION = 260;
 
@@ -33,6 +33,17 @@ type UploadFileItem = {
   previewUrl: string;
   status: UploadStatus;
   errorMessage?: string;
+};
+
+type ScreenWakeLock = {
+  released: boolean;
+  release: () => Promise<void>;
+};
+
+type WakeLockNavigator = Navigator & {
+  wakeLock?: {
+    request: (type: "screen") => Promise<ScreenWakeLock>;
+  };
 };
 
 type MyUploadItem = {
@@ -68,6 +79,28 @@ type AdminPhotoItem = {
   thumbnail_storage_path: string | null;
   file_size: number | null;
   created_at: string;
+};
+
+type DriveStorageStats = {
+  storage: {
+    usageBytes: number;
+    accountLimitBytes: number;
+    uploadLimitBytes: number;
+    remainingUploadBytes: number;
+    usagePercent: number;
+    guestOriginalBytes: number;
+  };
+  files: {
+    records: number;
+    driveOriginals: number;
+    driveThumbnails: number;
+    missingThumbnails: number;
+    legacyFiles: number;
+  };
+  folders: {
+    originals: { ok: boolean; status: number; name: string | null };
+    thumbnails: { ok: boolean; status: number; name: string | null };
+  };
 };
 
 function formatFileSize(size: number) {
@@ -128,6 +161,15 @@ function getUploadContentType(file: File) {
   };
 
   return contentTypes[extension] || "application/octet-stream";
+}
+
+function getFileSignature(file: File) {
+  return [
+    file.name.toLowerCase(),
+    file.size,
+    file.lastModified,
+    file.type.toLowerCase(),
+  ].join(":");
 }
 
 async function getUploadError(response: Response) {
@@ -400,6 +442,8 @@ export function PhotoUploadSection() {
 export function PhotoUploadPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const filesRef = useRef<UploadFileItem[]>([]);
+  const wakeLockRef = useRef<ScreenWakeLock | null>(null);
+  const uploadedFileSignaturesRef = useRef(new Set<string>());
 
   const [isDragging, setIsDragging] = useState(false);
 
@@ -410,6 +454,7 @@ export function PhotoUploadPage() {
   const [files, setFiles] = useState<UploadFileItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [toast, setToast] = useState("");
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const [uploadComplete, setUploadComplete] = useState<{
     count: number;
@@ -423,10 +468,76 @@ export function PhotoUploadPage() {
     success: 0,
     fail: 0,
   });
+  const [stagedUploadProgress, setStagedUploadProgress] = useState(0);
 
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!uploading) {
+      return;
+    }
+
+    let active = true;
+    const wakeLock = (navigator as WakeLockNavigator).wakeLock;
+
+    const requestWakeLock = async () => {
+      if (!wakeLock || document.visibilityState !== "visible") {
+        return;
+      }
+
+      try {
+        const lock = await wakeLock.request("screen");
+
+        if (!active) {
+          await lock.release();
+          return;
+        }
+
+        wakeLockRef.current = lock;
+      } catch (error) {
+        console.warn("화면 켜짐 유지 기능을 사용할 수 없습니다.", error);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        (!wakeLockRef.current || wakeLockRef.current.released)
+      ) {
+        void requestWakeLock();
+      }
+    };
+
+    void requestWakeLock();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+
+      const lock = wakeLockRef.current;
+      wakeLockRef.current = null;
+
+      if (lock && !lock.released) {
+        void lock.release();
+      }
+    };
+  }, [uploading]);
 
   useEffect(() => {
     return () => {
@@ -495,12 +606,36 @@ export function PhotoUploadPage() {
       return;
     }
 
-    if (files.length + allowedFiles.length > MAX_FILE_COUNT) {
+    const knownSignatures = new Set([
+      ...uploadedFileSignaturesRef.current,
+      ...files.map((item) => getFileSignature(item.file)),
+    ]);
+    const uniqueFiles: File[] = [];
+    let duplicateCount = 0;
+
+    allowedFiles.forEach((file) => {
+      const signature = getFileSignature(file);
+
+      if (knownSignatures.has(signature)) {
+        duplicateCount += 1;
+        return;
+      }
+
+      knownSignatures.add(signature);
+      uniqueFiles.push(file);
+    });
+
+    if (uniqueFiles.length === 0) {
+      showToast("이미 선택했거나 업로드한 사진입니다.");
+      return;
+    }
+
+    if (files.length + uniqueFiles.length > MAX_FILE_COUNT) {
       showToast(`한 번에 최대 ${MAX_FILE_COUNT}개까지 업로드할 수 있습니다.`);
       return;
     }
 
-    const nextItems: UploadFileItem[] = allowedFiles.map((file) => ({
+    const nextItems: UploadFileItem[] = uniqueFiles.map((file) => ({
       id: `${Date.now()}-${crypto.randomUUID()}`,
       file,
       previewUrl: URL.createObjectURL(file),
@@ -508,6 +643,10 @@ export function PhotoUploadPage() {
     }));
 
     setFiles((prev) => [...prev, ...nextItems]);
+
+    if (duplicateCount > 0) {
+      showToast(`중복 사진 ${duplicateCount}장은 제외했습니다.`);
+    }
   };
 
   const handleInputFiles = (e: ChangeEvent<HTMLInputElement>) => {
@@ -566,7 +705,8 @@ export function PhotoUploadPage() {
   const uploadOneFile = async (
     item: UploadFileItem,
     passwordHash: string | null,
-    uploadGroupId: string
+    uploadGroupId: string,
+    onOriginalUploaded?: () => void
   ) => {
     const trimmedName = uploaderName.trim();
     const trimmedPhone = uploaderPhone.trim();
@@ -580,29 +720,31 @@ export function PhotoUploadPage() {
     }
 
     const response = await fetch(`${PHOTO_UPLOAD_API_URL}/upload`, {
-        method: "POST",
-        headers: {
-          "content-type": getUploadContentType(item.file),
-          "x-upload-uploader-name": encodeURIComponent(trimmedName),
-          "x-upload-uploader-phone": trimmedPhone,
-          "x-upload-name-key": encodeURIComponent(nameKey),
-          "x-upload-phone-key": phoneKey,
-          "x-upload-folder-key": uploaderFolder,
-          "x-upload-password-hash": passwordHash || "",
-          "x-upload-group-id": uploadGroupId,
-          "x-upload-original-name": encodeURIComponent(item.file.name),
-        },
-        body: item.file,
-      });
+      method: "POST",
+      headers: {
+        "content-type": getUploadContentType(item.file),
+        "x-upload-uploader-name": encodeURIComponent(trimmedName),
+        "x-upload-uploader-phone": trimmedPhone,
+        "x-upload-name-key": encodeURIComponent(nameKey),
+        "x-upload-phone-key": phoneKey,
+        "x-upload-folder-key": uploaderFolder,
+        "x-upload-password-hash": passwordHash || "",
+        "x-upload-group-id": uploadGroupId,
+        "x-upload-original-name": encodeURIComponent(item.file.name),
+      },
+      body: item.file,
+    });
 
-      if (!response.ok) {
-        throw new Error(await getUploadError(response));
-      }
+    if (!response.ok) {
+      throw new Error(await getUploadError(response));
+    }
 
-      const uploaded = (await response.json()) as {
-        id: string;
-        fileId: string;
-      };
+    const uploaded = (await response.json()) as {
+      id: string;
+      fileId: string;
+    };
+
+      onOriginalUploaded?.();
 
       try {
         const thumbnailBlob = await createImageThumbnail(item.file);
@@ -653,11 +795,26 @@ export function PhotoUploadPage() {
       return;
     }
 
+    const queuedFiles = files.filter(
+      (item) => item.status === "waiting" || item.status === "error"
+    );
+
+    if (queuedFiles.length === 0) {
+      showToast("다시 업로드할 사진이 없습니다.");
+      return;
+    }
+
+    if (!navigator.onLine) {
+      showToast("인터넷 연결을 확인한 뒤 다시 시도해주세요.");
+      return;
+    }
+
     setUploading(true);
+    setStagedUploadProgress(0);
 
     setUploadProgress({
       current: 0,
-      total: files.length,
+      total: queuedFiles.length,
       success: 0,
       fail: 0,
     });
@@ -678,8 +835,18 @@ export function PhotoUploadPage() {
 
     let successCount = 0;
     let failCount = 0;
+    let interrupted = false;
 
-    for (const [index, item] of files.entries()) {
+    for (const [index, item] of queuedFiles.entries()) {
+      if (!navigator.onLine) {
+        interrupted = true;
+        break;
+      }
+
+      setStagedUploadProgress(
+        Math.round(((index + 0.1) / queuedFiles.length) * 100)
+      );
+
       setUploadProgress((prev) => ({
         ...prev,
         current: index + 1,
@@ -694,9 +861,17 @@ export function PhotoUploadPage() {
       );
 
       try {
-        await uploadOneFile(item, passwordHash, uploadGroupId);
+        await uploadOneFile(item, passwordHash, uploadGroupId, () => {
+          setStagedUploadProgress(
+            Math.round(((index + 0.75) / queuedFiles.length) * 100)
+          );
+        });
 
         successCount += 1;
+        uploadedFileSignaturesRef.current.add(getFileSignature(item.file));
+        setStagedUploadProgress(
+          Math.round(((index + 1) / queuedFiles.length) * 100)
+        );
 
         setUploadProgress((prev) => ({
           ...prev,
@@ -711,10 +886,18 @@ export function PhotoUploadPage() {
       } catch (error) {
         console.error("파일 업로드 실패:", error);
 
-        const errorMessage =
-          error instanceof Error ? error.message : "업로드 실패";
+        const isNetworkError = error instanceof TypeError || !navigator.onLine;
+        const errorMessage = isNetworkError
+          ? "네트워크 연결을 확인해주세요."
+          : error instanceof Error
+            ? error.message
+            : "업로드 실패";
 
         failCount += 1;
+        interrupted = isNetworkError;
+        setStagedUploadProgress(
+          Math.round(((index + 1) / queuedFiles.length) * 100)
+        );
 
         setUploadProgress((prev) => ({
           ...prev,
@@ -730,7 +913,21 @@ export function PhotoUploadPage() {
         );
 
         showToast(errorMessage);
+
+        if (interrupted) {
+          break;
+        }
       }
+    }
+
+    if (interrupted) {
+      setUploading(false);
+      showToast("연결이 끊겼습니다. 연결 후 남은 사진을 다시 시도해주세요.");
+      return;
+    }
+
+    if (failCount === 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, 350));
     }
 
     setUploading(false);
@@ -745,14 +942,13 @@ export function PhotoUploadPage() {
       );
 
       setUploadComplete({
-        count: successCount,
+        count:
+          files.filter((item) => item.status === "success").length +
+          successCount,
         name: trimmedName,
         phone: trimmedPhone,
       });
 
-      setUploaderPhone("");
-      setUploaderName("");
-      setUploaderPassword("");
       clearSelectedFiles();
 
       return;
@@ -762,9 +958,12 @@ export function PhotoUploadPage() {
   };
 
   const uploadPercent =
-    uploadProgress.total > 0
-      ? Math.round((uploadProgress.current / uploadProgress.total) * 100)
-      : 0;
+    uploadProgress.total > 0 ? stagedUploadProgress : 0;
+  const failedFileCount = files.filter((item) => item.status === "error").length;
+  const shareMorePhotos = () => {
+    setUploadComplete(null);
+    fileInputRef.current?.click();
+  };
 
   return (
     <section className="section upload-page-section">
@@ -819,6 +1018,10 @@ export function PhotoUploadPage() {
           placeholder="01012345678"
           disabled={uploading}
         />
+        <p className="upload-form-help">
+          <Search size={14} />
+          <span>연락처를 입력하면 내가 공유한 사진을 다시 확인할 수 있어요.</span>
+        </p>
       </div>
 
       <div className="upload-form-group">
@@ -931,7 +1134,7 @@ export function PhotoUploadPage() {
                       <span className="my-photo-video-badge">VIDEO</span>
                     )}
 
-                    {!uploading && item.status === "waiting" && (
+                    {!uploading && item.status !== "success" && (
                       <button
                         className="upload-preview-remove"
                         onClick={() => removeSelectedFile(item.id)}
@@ -949,6 +1152,11 @@ export function PhotoUploadPage() {
                       {item.status === "success" && "완료"}
                       {item.status === "error" && "실패"}
                     </em>
+                    {item.status === "error" && item.errorMessage && (
+                      <span className="upload-error-message" title={item.errorMessage}>
+                        {item.errorMessage}
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -960,9 +1168,13 @@ export function PhotoUploadPage() {
       <button
         className="upload-submit-main-button"
         onClick={uploadFiles}
-        disabled={uploading || !uploaderName.trim() || files.length === 0}
+        disabled={uploading}
       >
-        {uploading ? "업로드 중..." : "사진 업로드하기"}
+        {uploading
+          ? "업로드 중..."
+          : failedFileCount > 0
+            ? `실패한 사진 ${failedFileCount}장 다시 시도`
+            : "사진 업로드하기"}
       </button>
 
       <button
@@ -1000,6 +1212,12 @@ export function PhotoUploadPage() {
               이 화면을 닫지 말아주세요.
             </p>
 
+            {!isOnline && (
+              <div className="upload-offline-notice" role="alert">
+                인터넷 연결이 끊겼습니다
+              </div>
+            )}
+
             <div className="upload-progress-percent">{uploadPercent}%</div>
 
             <div className="upload-progress-bar cute">
@@ -1035,6 +1253,15 @@ export function PhotoUploadPage() {
               <button
                 type="button"
                 className="upload-complete-primary"
+                onClick={shareMorePhotos}
+              >
+                <Plus size={17} />
+                <span>사진 더 공유하기</span>
+              </button>
+
+              <button
+                type="button"
+                className="upload-complete-secondary"
                 onClick={() => {
                   setUploadComplete(null);
                   window.location.hash = "my-photos";
@@ -1045,7 +1272,7 @@ export function PhotoUploadPage() {
 
               <button
                 type="button"
-                className="upload-complete-secondary"
+                className="upload-complete-tertiary"
                 onClick={() => {
                   setUploadComplete(null);
                   window.location.hash = "";
@@ -1750,6 +1977,7 @@ export function AdminPhotosPage() {
 
   const [summaries, setSummaries] = useState<AdminSummaryItem[]>([]);
   const [photos, setPhotos] = useState<AdminPhotoItem[]>([]);
+  const [driveStats, setDriveStats] = useState<DriveStorageStats | null>(null);
   const [selectedUploader, setSelectedUploader] =
     useState<AdminSummaryItem | null>(null);
 
@@ -2052,6 +2280,28 @@ export function AdminPhotosPage() {
         return;
       }
 
+      let nextDriveStats: DriveStorageStats | null = null;
+
+      if (USE_GOOGLE_DRIVE_UPLOAD) {
+        try {
+          const statsResponse = await fetch(
+            `${PHOTO_UPLOAD_API_URL}/admin/storage-stats`,
+            {
+              headers: { "x-admin-password-hash": passwordHash },
+            }
+          );
+
+          if (!statsResponse.ok) {
+            throw new Error(await getUploadError(statsResponse));
+          }
+
+          nextDriveStats = (await statsResponse.json()) as DriveStorageStats;
+        } catch (statsError) {
+          console.warn("Google Drive 관리 현황 조회 실패:", statsError);
+          showToast("사진 목록은 불러왔지만 Drive 현황은 확인하지 못했습니다.");
+        }
+      }
+
       const rows = (data || []) as AdminSummaryItem[];
 
       if (rows.length === 0) {
@@ -2060,6 +2310,7 @@ export function AdminPhotosPage() {
 
       setAdminPasswordHash(passwordHash);
       setSummaries(rows);
+      setDriveStats(nextDriveStats);
       setSelectedUploader(null);
       setPhotos([]);
       closeViewer();
@@ -2295,6 +2546,70 @@ const adminStats = summaries.reduce(
     </div>
   </div>
 )}
+
+      {driveStats && (
+        <div className="drive-storage-section">
+          <div className="drive-storage-heading">
+            <strong>Google Drive 저장 현황</strong>
+            <span>{driveStats.storage.usagePercent.toFixed(1)}% 사용</span>
+          </div>
+
+          <div
+            className="drive-storage-progress"
+            role="progressbar"
+            aria-label="Google Drive 업로드 한도 사용률"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(driveStats.storage.usagePercent)}
+          >
+            <span style={{ width: `${driveStats.storage.usagePercent}%` }} />
+          </div>
+
+          <div className="drive-storage-metrics">
+            <div>
+              <span>Drive 전체 사용</span>
+              <strong>{formatFileSize(driveStats.storage.usageBytes)}</strong>
+            </div>
+            <div>
+              <span>업로드 가능 용량</span>
+              <strong>{formatFileSize(driveStats.storage.remainingUploadBytes)}</strong>
+            </div>
+            <div>
+              <span>원본</span>
+              <strong>{driveStats.files.driveOriginals}개</strong>
+            </div>
+            <div>
+              <span>썸네일</span>
+              <strong>{driveStats.files.driveThumbnails}개</strong>
+            </div>
+          </div>
+
+          <div className="drive-folder-status">
+            <span className={driveStats.folders.originals.ok ? "ok" : "error"}>
+              원본 폴더 {driveStats.folders.originals.ok ? "정상" : "연결 오류"}
+            </span>
+            <span className={driveStats.folders.thumbnails.ok ? "ok" : "error"}>
+              썸네일 폴더 {driveStats.folders.thumbnails.ok ? "정상" : "연결 오류"}
+            </span>
+          </div>
+
+          {(driveStats.files.missingThumbnails > 0 ||
+            driveStats.files.legacyFiles > 0 ||
+            driveStats.storage.usagePercent >= 80) && (
+            <div className="drive-storage-warnings">
+              {driveStats.storage.usagePercent >= 80 && (
+                <p>Drive 업로드 한도의 80% 이상을 사용했습니다.</p>
+              )}
+              {driveStats.files.missingThumbnails > 0 && (
+                <p>썸네일이 없는 원본이 {driveStats.files.missingThumbnails}개 있습니다.</p>
+              )}
+              {driveStats.files.legacyFiles > 0 && (
+                <p>기존 Supabase Storage 파일이 {driveStats.files.legacyFiles}개 있습니다.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {summaries.length > 0 && (
         <div className="admin-uploader-list">
