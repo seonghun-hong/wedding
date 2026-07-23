@@ -630,12 +630,17 @@ export function PhotoUploadPage() {
       return;
     }
 
-    if (files.length + uniqueFiles.length > MAX_FILE_COUNT) {
-      showToast(`한 번에 최대 ${MAX_FILE_COUNT}개까지 업로드할 수 있습니다.`);
+    const availableCount = Math.max(0, MAX_FILE_COUNT - files.length);
+
+    if (availableCount === 0) {
+      showToast(`사진은 한 번에 최대 ${MAX_FILE_COUNT}장까지 선택할 수 있습니다.`);
       return;
     }
 
-    const nextItems: UploadFileItem[] = uniqueFiles.map((file) => ({
+    const filesToAdd = uniqueFiles.slice(0, availableCount);
+    const overflowCount = uniqueFiles.length - filesToAdd.length;
+
+    const nextItems: UploadFileItem[] = filesToAdd.map((file) => ({
       id: `${Date.now()}-${crypto.randomUUID()}`,
       file,
       previewUrl: URL.createObjectURL(file),
@@ -644,7 +649,13 @@ export function PhotoUploadPage() {
 
     setFiles((prev) => [...prev, ...nextItems]);
 
-    if (duplicateCount > 0) {
+    if (overflowCount > 0 && duplicateCount > 0) {
+      showToast(
+        `최대 ${MAX_FILE_COUNT}장만 추가하고 중복 ${duplicateCount}장도 제외했습니다.`
+      );
+    } else if (overflowCount > 0) {
+      showToast(`최대 ${MAX_FILE_COUNT}장까지만 목록에 추가했습니다.`);
+    } else if (duplicateCount > 0) {
       showToast(`중복 사진 ${duplicateCount}장은 제외했습니다.`);
     }
   };
