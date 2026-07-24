@@ -97,7 +97,6 @@ async function generateThumbnails() {
 async function generatePageImages() {
   const heroSource = path.join(imagesDir, "hero.jpg");
   const heroPoster = path.join(imagesDir, "hero.webp");
-  const shareImage = path.join(imagesDir, "og-share.jpg");
 
   if (!(await fileExists(heroPoster))) {
     await sharp(heroSource)
@@ -106,15 +105,6 @@ async function generatePageImages() {
       .webp({ quality: 76 })
       .toFile(heroPoster);
     console.log("Created: images/hero.webp");
-  }
-
-  if (!(await fileExists(shareImage))) {
-    await sharp(heroSource)
-      .rotate()
-      .resize({ width: 1200, height: 630, fit: "cover", position: "south" })
-      .jpeg({ quality: 82, progressive: true })
-      .toFile(shareImage);
-    console.log("Created: images/og-share.jpg");
   }
 }
 
