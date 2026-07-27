@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { Bus, Copy, MapPin, ParkingCircle, TrainFront } from "lucide-react";
+import {
+  Bus,
+  Copy,
+  Lock,
+  MapPin,
+  Maximize2,
+  ParkingCircle,
+  TrainFront,
+} from "lucide-react";
 import { invitation } from "../data/invitation";
 import { copyText } from "../lib/clipboard";
 
@@ -63,8 +71,13 @@ function loadKakaoMapSdk(appKey: string) {
 
 export function LocationSection() {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
+  const [mapInteractive, setMapInteractive] = useState(false);
+  const [usesMapLock] = useState(() =>
+    window.matchMedia("(pointer: coarse), (max-width: 768px)").matches
+  );
   const [toast, setToast] = useState("");
   const hasKakaoKey = Boolean(import.meta.env.VITE_KAKAO_JS_KEY);
 
@@ -94,7 +107,9 @@ export function LocationSection() {
           level: INITIAL_MAP_LEVEL,
         });
 
-        if (window.matchMedia("(pointer: coarse)").matches) {
+        mapInstanceRef.current = map;
+
+        if (usesMapLock) {
           map.setDraggable(false);
           map.setZoomable(false);
         }
@@ -119,8 +134,20 @@ export function LocationSection() {
 
     return () => {
       isMounted = false;
+      mapInstanceRef.current = null;
     };
-  }, []);
+  }, [usesMapLock]);
+
+  const toggleMapInteraction = () => {
+    if (!mapInstanceRef.current) {
+      return;
+    }
+
+    const nextInteractive = !mapInteractive;
+    mapInstanceRef.current.setDraggable(nextInteractive);
+    mapInstanceRef.current.setZoomable(nextInteractive);
+    setMapInteractive(nextInteractive);
+  };
 
   const open = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
@@ -146,17 +173,33 @@ export function LocationSection() {
         <p className="location-address">{WEDDING_ADDRESS}</p>
       </div>
 
-      <div ref={mapRef} className="kakao-map-box">
-        {hasKakaoKey && !mapReady && !mapFailed && (
-          <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
-        )}
+      <div
+        className={`kakao-map-shell${mapInteractive ? " is-interactive" : ""}`}
+      >
+        <div ref={mapRef} className="kakao-map-box">
+          {hasKakaoKey && !mapReady && !mapFailed && (
+            <div className="kakao-map-loading">지도를 불러오는 중입니다</div>
+          )}
 
-        {(!hasKakaoKey || mapFailed) && (
-          <div className="map-fallback-card">
-            <strong>{WEDDING_PLACE_NAME}</strong>
-            <span>{WEDDING_ADDRESS}</span>
-            <p>지도 앱 버튼을 눌러 위치를 확인해 주세요.</p>
-          </div>
+          {(!hasKakaoKey || mapFailed) && (
+            <div className="map-fallback-card">
+              <strong>{WEDDING_PLACE_NAME}</strong>
+              <span>{WEDDING_ADDRESS}</span>
+              <p>지도 앱 버튼을 눌러 위치를 확인해 주세요.</p>
+            </div>
+          )}
+        </div>
+
+        {usesMapLock && mapReady && (
+          <button
+            className="map-interaction-toggle"
+            type="button"
+            aria-pressed={mapInteractive}
+            onClick={toggleMapInteraction}
+          >
+            {mapInteractive ? <Lock size={15} /> : <Maximize2 size={15} />}
+            <span>{mapInteractive ? "지도 고정" : "지도 확대·이동"}</span>
+          </button>
         )}
       </div>
 
