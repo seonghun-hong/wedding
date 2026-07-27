@@ -26,11 +26,11 @@ export function IntroSection() {
       </div>
 
       <div className="parents-line">
-        <p>
-          {invitation.groom.father} · {invitation.groom.mother} 의 아들 <b>{invitation.groom.name}</b>
+        <p className="groom-parents-line">
+          {invitation.groom.father} · {invitation.groom.mother} 의 장남 <b>{invitation.groom.name}</b>
         </p>
         <p>
-          {invitation.bride.father} · {invitation.bride.mother} 의 딸 <b>{invitation.bride.name}</b>
+          {invitation.bride.father} · {invitation.bride.mother} 의 장녀 <b>{invitation.bride.name}</b>
         </p>
       </div>
 

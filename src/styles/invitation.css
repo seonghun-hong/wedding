@@ -191,6 +191,10 @@ img {
   margin: 0;
 }
 
+.parents-line .groom-parents-line {
+  transform: translateX(0.6em);
+}
+
 .parents-line b {
   color: #06101f;
   font-size: 17px;
