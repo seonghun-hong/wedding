@@ -552,6 +552,34 @@ img {
   touch-action: none;
 }
 
+.kakao-map-place-label {
+  position: relative;
+  padding: 7px 10px;
+  border: 1px solid rgba(203, 105, 124, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 3px 10px rgba(6, 16, 31, 0.16);
+  color: #333e50;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.kakao-map-place-label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(203, 105, 124, 0.45);
+  border-bottom: 1px solid rgba(203, 105, 124, 0.45);
+  background: rgba(255, 255, 255, 0.96);
+  transform: translateX(-50%) rotate(45deg);
+}
+
 .map-interaction-toggle {
   position: absolute;
   right: 12px;
