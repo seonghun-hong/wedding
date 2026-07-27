@@ -94,6 +94,11 @@ export function LocationSection() {
           level: INITIAL_MAP_LEVEL,
         });
 
+        if (window.matchMedia("(pointer: coarse)").matches) {
+          map.setDraggable(false);
+          map.setZoomable(false);
+        }
+
         const marker = new window.kakao.maps.Marker({
           position,
         });
