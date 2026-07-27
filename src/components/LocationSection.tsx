@@ -119,18 +119,6 @@ export function LocationSection() {
         });
 
         marker.setMap(map);
-
-        const placeLabel = document.createElement("div");
-        placeLabel.className = "kakao-map-place-label";
-        placeLabel.textContent = WEDDING_PLACE_NAME;
-
-        const placeOverlay = new window.kakao.maps.CustomOverlay({
-          position,
-          content: placeLabel,
-          yAnchor: 2.2,
-        });
-
-        placeOverlay.setMap(map);
         setMapReady(true);
 
         setTimeout(() => {
