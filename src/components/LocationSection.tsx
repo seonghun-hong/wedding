@@ -276,14 +276,14 @@ export function LocationSection() {
               <div className="bus-route-heading">
                 <span>예식장행</span>
               </div>
-              <strong>대전 → 세종 → 서울 예식장</strong>
+              <strong>세종 → 서울 예식장</strong>
             </div>
             <div className="bus-route">
               <div className="bus-route-heading">
                 <span>귀가행</span>
                 <time>오후 1:00 출발</time>
               </div>
-              <strong>서울 예식장 → 세종 → 대전</strong>
+              <strong>서울 예식장 → 세종</strong>
             </div>
           </div>
 

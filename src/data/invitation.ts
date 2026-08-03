@@ -87,14 +87,6 @@ export const invitation = {
       contact: "문의 연락처 추후 안내",
       stops: [
         {
-          id: "daejeon",
-          label: "대전",
-          time: "오전 7:40",
-          place: "대덕밸리만남의광장",
-          address: "대전 유성구 대덕대로 977",
-          mapUrl: "https://naver.me/FG7xuLxN",
-        },
-        {
           id: "sejong",
           label: "세종",
           time: "오전 8:10",
