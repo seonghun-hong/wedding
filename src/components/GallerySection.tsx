@@ -14,7 +14,7 @@ type SlideTarget = "prev" | "next" | "center" | null;
 const SLIDE_DURATION = 260;
 const PREVIEW_COUNT = 9;
 const PREFETCH_DISTANCE = 2;
-const GALLERY_ASSET_VERSION = "20260809-15";
+const GALLERY_ASSET_VERSION = "20260809-03-2";
 
 function galleryAsset(path: string) {
   return `${asset(path)}?v=${GALLERY_ASSET_VERSION}`;
