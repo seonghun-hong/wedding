@@ -14,6 +14,11 @@ type SlideTarget = "prev" | "next" | "center" | null;
 const SLIDE_DURATION = 260;
 const PREVIEW_COUNT = 9;
 const PREFETCH_DISTANCE = 2;
+const GALLERY_ASSET_VERSION = "20260809-15";
+
+function galleryAsset(path: string) {
+  return `${asset(path)}?v=${GALLERY_ASSET_VERSION}`;
+}
 
 /*
   원본:
@@ -124,7 +129,7 @@ export function GallerySection() {
   };
 
   const preloadGalleryImage = (index: number) => {
-    const src = asset(getOptimizedImageSrc(gallery[index]));
+    const src = galleryAsset(getOptimizedImageSrc(gallery[index]));
 
     if (preloadedImageSetRef.current.has(src)) {
       return Promise.resolve();
@@ -212,7 +217,9 @@ export function GallerySection() {
   const openModal = (index: number) => {
     slideRequestIdRef.current += 1;
     setCurrentImageReady(
-      preloadedImageSetRef.current.has(asset(getOptimizedImageSrc(gallery[index])))
+      preloadedImageSetRef.current.has(
+        galleryAsset(getOptimizedImageSrc(gallery[index]))
+      )
     );
     selectedIndexRef.current = index;
     setSelectedIndex(index);
@@ -581,7 +588,7 @@ export function GallerySection() {
                   aria-label={`웨딩 사진 ${index + 1} 크게 보기`}
                 >
                   <img
-                    src={asset(thumbnailSrc)}
+                    src={galleryAsset(thumbnailSrc)}
                     alt={`웨딩 사진 ${index + 1}`}
                     loading="lazy"
                     decoding="async"
@@ -685,7 +692,7 @@ export function GallerySection() {
             >
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(getOptimizedImageSrc(gallery[prevIndex]))}
+                  src={galleryAsset(getOptimizedImageSrc(gallery[prevIndex]))}
                   alt={`이전 사진 ${prevIndex + 1}`}
                   draggable={false}
                   loading="eager"
@@ -695,7 +702,7 @@ export function GallerySection() {
 
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(getOptimizedImageSrc(gallery[selectedIndex]))}
+                  src={galleryAsset(getOptimizedImageSrc(gallery[selectedIndex]))}
                   alt={`확대 사진 ${selectedIndex + 1}`}
                   draggable={false}
                   loading="eager"
@@ -707,7 +714,7 @@ export function GallerySection() {
 
               <div className="photo-viewer-panel">
                 <img
-                  src={asset(getOptimizedImageSrc(gallery[nextIndex]))}
+                  src={galleryAsset(getOptimizedImageSrc(gallery[nextIndex]))}
                   alt={`다음 사진 ${nextIndex + 1}`}
                   draggable={false}
                   loading="eager"
