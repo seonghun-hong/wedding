@@ -65,11 +65,14 @@ export const invitation = {
     "/images/gallery/gallery-05.jpg",
     "/images/gallery/gallery-06.jpg",
     "/images/gallery/gallery-07.jpg",
-    "/images/gallery/gallery-08.jpg",
+    "/images/gallery/gallery-08.png",
     "/images/gallery/gallery-09.jpg",
     "/images/gallery/gallery-10.jpg",
     "/images/gallery/gallery-11.jpg",
     "/images/gallery/gallery-12.jpg",
+    "/images/gallery/gallery-13.jpg",
+    "/images/gallery/gallery-14.jpg",
+    "/images/gallery/gallery-15.jpg",
   ],
 
   links: {

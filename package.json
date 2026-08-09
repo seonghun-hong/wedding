@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "generate:thumbs": "node scripts/generate-thumbnails.mjs",
+    "generate:thumbs:force": "node scripts/generate-thumbnails.mjs --force",
     "build": "npm run generate:thumbs && tsc -b && node ./node_modules/vite/bin/vite.js build",
     "preview": "vite preview"
   },

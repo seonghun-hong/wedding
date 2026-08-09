@@ -10,6 +10,7 @@ const optimizedDir = path.join(galleryDir, "optimized");
 const imagesDir = path.join(projectRoot, "public", "images");
 
 const allowedExtensions = [".jpg", ".jpeg", ".png", ".webp"];
+const forceRegenerate = process.argv.includes("--force");
 
 async function fileExists(filePath) {
   try {
@@ -18,6 +19,19 @@ async function fileExists(filePath) {
   } catch {
     return false;
   }
+}
+
+async function isOutputCurrent(inputPath, outputPath) {
+  if (forceRegenerate || !(await fileExists(outputPath))) {
+    return false;
+  }
+
+  const [inputStat, outputStat] = await Promise.all([
+    fs.stat(inputPath),
+    fs.stat(outputPath),
+  ]);
+
+  return outputStat.mtimeMs >= inputStat.mtimeMs;
 }
 
 async function generateThumbnails() {
@@ -49,10 +63,10 @@ async function generateThumbnails() {
     const thumbnailPath = path.join(thumbsDir, `${name}.webp`);
     const optimizedPath = path.join(optimizedDir, `${name}.webp`);
 
-    const thumbnailExists = await fileExists(thumbnailPath);
+    const thumbnailIsCurrent = await isOutputCurrent(inputPath, thumbnailPath);
 
-    if (thumbnailExists) {
-      console.log(`Skip: ${file} -> thumbs/${name}.webp already exists`);
+    if (thumbnailIsCurrent) {
+      console.log(`Skip: ${file} -> thumbs/${name}.webp is current`);
     } else {
       await sharp(inputPath)
         .rotate()
@@ -70,10 +84,10 @@ async function generateThumbnails() {
       console.log(`Created: ${file} -> thumbs/${name}.webp`);
     }
 
-    const optimizedExists = await fileExists(optimizedPath);
+    const optimizedIsCurrent = await isOutputCurrent(inputPath, optimizedPath);
 
-    if (optimizedExists) {
-      console.log(`Skip: ${file} -> optimized/${name}.webp already exists`);
+    if (optimizedIsCurrent) {
+      console.log(`Skip: ${file} -> optimized/${name}.webp is current`);
       continue;
     }
 
