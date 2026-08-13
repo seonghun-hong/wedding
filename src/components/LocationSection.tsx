@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Bus,
   Copy,
+  Flower2,
   Lock,
   MapPin,
   Maximize2,
@@ -171,6 +172,18 @@ export function LocationSection() {
           {WEDDING_PLACE_NAME} {WEDDING_HALL}
         </h3>
         <p className="location-address">{WEDDING_ADDRESS}</p>
+      </div>
+
+      <div className="flower-notice" aria-label="축하 화환 안내">
+        <div className="flower-notice-title">
+          <Flower2 size={18} aria-hidden="true" />
+          <strong>축하 화환 안내</strong>
+        </div>
+        <p>
+          웨딩홀 사정으로 축하 화환은 정중히 사양합니다.
+          <br />
+          축하해 주시는 따뜻한 마음만 감사히 받겠습니다.
+        </p>
       </div>
 
       <div

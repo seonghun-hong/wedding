@@ -191,10 +191,6 @@ img {
   margin: 0;
 }
 
-.parents-line .groom-parents-line {
-  transform: translateX(0.55em);
-}
-
 .parents-line b {
   color: #06101f;
   font-size: 17px;
@@ -505,6 +501,38 @@ img {
 
 .location-hall {
   display: none;
+}
+
+.flower-notice {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto 32px;
+  padding: 20px 16px;
+  border-top: 1px solid var(--location-accent-light);
+  border-bottom: 1px solid var(--location-accent-light);
+  text-align: center;
+}
+
+.flower-notice-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  color: var(--location-accent);
+}
+
+.flower-notice-title strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.flower-notice p {
+  margin: 0;
+  color: var(--location-muted);
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.75;
 }
 
 .mute-button:disabled {
