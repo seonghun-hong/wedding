@@ -7,7 +7,6 @@ import { CalendarSection } from "./components/CalendarSection";
 import { GallerySection } from "./components/GallerySection";
 import { LocationSection } from "./components/LocationSection";
 import { AccountSection } from "./components/AccountSection";
-import { GuestbookSection } from "./components/GuestbookSection";
 import { AdminGuestbookPage } from "./components/AdminGuestbookPage";
 import { AdminRsvpPage } from "./components/AdminRsvpPage";
 import {
@@ -95,7 +94,6 @@ function App() {
       <GallerySection />
       <LocationSection />
       <AccountSection />
-      <GuestbookSection />
       <PhotoUploadSection />
       <FooterSection />
       <RsvpPrompt />
