@@ -2,7 +2,7 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const DEFAULT_MAX_IMAGE_FILE_BYTES = 30 * 1024 * 1024;
-const DEFAULT_MAX_VIDEO_FILE_BYTES = 90 * 1024 * 1024;
+const DEFAULT_MAX_VIDEO_FILE_BYTES = 100 * 1024 * 1024;
 const DEFAULT_MAX_STORAGE_BYTES = 13 * 1024 * 1024 * 1024;
 const IMAGE_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/avif",

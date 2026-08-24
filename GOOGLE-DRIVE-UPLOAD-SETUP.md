@@ -127,7 +127,7 @@ Repository Settings
 ## 6. 적용되는 안전 제한
 
 - 사진과 MP4·MOV·WebM 동영상 원본 허용
-- 사진 1개 최대 30MB, 동영상 1개 최대 90MB
+- 사진 1개 최대 30MB, 동영상 1개 최대 100MB
 - 한 번에 최대 30개
 - Google 전체 사용량 13GB 도달 시 업로드 자동 차단
 - Supabase 저장 실패 시 Drive 원본 자동 삭제
