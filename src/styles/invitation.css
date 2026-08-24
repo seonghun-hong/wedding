@@ -2139,6 +2139,7 @@ img {
   overflow: hidden;
 }
 
+.photo-viewer-media .photo-viewer-fallback,
 .photo-viewer-media .photo-viewer-placeholder,
 .photo-viewer-media .photo-viewer-original {
   position: absolute;
@@ -2146,10 +2147,20 @@ img {
   margin: auto;
 }
 
+.photo-viewer-media .photo-viewer-fallback {
+  z-index: 0;
+  opacity: 1;
+}
+
 .photo-viewer-media .photo-viewer-placeholder {
   z-index: 1;
-  opacity: 0.72;
+  opacity: 0;
   filter: blur(1px);
+  transition: opacity 0.12s ease;
+}
+
+.photo-viewer-media .photo-viewer-placeholder.is-loaded {
+  opacity: 0.72;
 }
 
 .photo-viewer-media .photo-viewer-original {

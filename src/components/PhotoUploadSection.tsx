@@ -138,9 +138,16 @@ class UploadRequestError extends Error {
   }
 }
 
-function PhotoViewerMedia({ item }: { item: ViewerMediaItem }) {
+function PhotoViewerMedia({
+  item,
+  fallbackSrc,
+}: {
+  item: ViewerMediaItem;
+  fallbackSrc?: string;
+}) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
 
   if (item.media_type === "video") {
     return (
@@ -156,14 +163,26 @@ function PhotoViewerMedia({ item }: { item: ViewerMediaItem }) {
 
   return (
     <div className="photo-viewer-media">
+      {!loaded && fallbackSrc && (
+        <img
+          className="photo-viewer-fallback"
+          src={fallbackSrc}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          draggable={false}
+        />
+      )}
+
       {!loaded && item.thumbnail_url && (
         <img
-          className="photo-viewer-placeholder"
+          className={`photo-viewer-placeholder${previewLoaded ? " is-loaded" : ""}`}
           src={item.thumbnail_url}
           alt=""
           aria-hidden="true"
           decoding="async"
           draggable={false}
+          onLoad={() => setPreviewLoaded(true)}
         />
       )}
 
@@ -1800,8 +1819,14 @@ export function MyPhotosPage() {
     }
   };
 
-  const renderViewerMedia = (item: MyUploadItem) => {
-    return <PhotoViewerMedia key={item.id} item={item} />;
+  const renderViewerMedia = (item: MyUploadItem, fallbackSrc?: string) => {
+    return (
+      <PhotoViewerMedia
+        key={item.id}
+        item={item}
+        fallbackSrc={fallbackSrc}
+      />
+    );
   };
 
   useEffect(() => {
@@ -1886,6 +1911,9 @@ export function MyPhotosPage() {
     selectedIndex !== null && myUploads.length > 0
       ? getNextIndex(selectedIndex)
       : null;
+  const currentViewerFallback = selectedIndex !== null
+    ? myUploads[selectedIndex]?.thumbnail_url || myUploads[selectedIndex]?.photo_url
+    : undefined;
 
   return (
     <section className="section my-photos-page-section">
@@ -2062,15 +2090,15 @@ export function MyPhotosPage() {
               }}
             >
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[prevIndex])}
+                {renderViewerMedia(myUploads[prevIndex], currentViewerFallback)}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[selectedIndex])}
+                {renderViewerMedia(myUploads[selectedIndex], currentViewerFallback)}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[nextIndex])}
+                {renderViewerMedia(myUploads[nextIndex], currentViewerFallback)}
               </div>
             </div>
           </div>
