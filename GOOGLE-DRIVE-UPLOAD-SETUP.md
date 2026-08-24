@@ -17,7 +17,6 @@ Supabase에는 이름, 연락처, 파일 주소 같은 작은 목록 정보만 �
 
 1. `Wedding Photos`
 2. 그 안에 `originals`
-3. 그 안에 `thumbnails`
 
 각 폴더를 열었을 때 주소가 아래와 같다면 마지막 부분이 폴더 ID입니다.
 
@@ -25,7 +24,10 @@ Supabase에는 이름, 연락처, 파일 주소 같은 작은 목록 정보만 �
 https://drive.google.com/drive/folders/여기가_폴더_ID
 ```
 
-`originals`와 `thumbnails` 폴더 ID를 각각 메모합니다.
+`originals` 폴더 ID를 메모합니다.
+
+썸네일 파일은 별도로 저장하지 않습니다. 목록을 열 때 Google Drive가 자동 생성한
+저화질 썸네일을 Cloudflare Worker가 대신 받아 캐시해서 보여줍니다.
 
 ## 2. Google Drive API 켜기
 
@@ -81,7 +83,6 @@ npx.cmd wrangler secret put GOOGLE_CLIENT_ID
 npx.cmd wrangler secret put GOOGLE_CLIENT_SECRET
 npx.cmd wrangler secret put GOOGLE_REFRESH_TOKEN
 npx.cmd wrangler secret put GOOGLE_DRIVE_ORIGINALS_FOLDER_ID
-npx.cmd wrangler secret put GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID
 npx.cmd wrangler secret put SUPABASE_URL
 npx.cmd wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 ```

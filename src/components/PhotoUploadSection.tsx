@@ -361,66 +361,6 @@ async function createPasswordHash(password: string) {
   return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function createImageThumbnail(file: File) {
-  return new Promise<Blob>((resolve, reject) => {
-    const image = new Image();
-    const url = URL.createObjectURL(file);
-
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-
-      const canvas = document.createElement("canvas");
-      const size = 500;
-
-      canvas.width = size;
-      canvas.height = size;
-
-      const ctx = canvas.getContext("2d");
-
-      if (!ctx) {
-        reject(new Error("Canvas context를 생성하지 못했습니다."));
-        return;
-      }
-
-      const sourceSize = Math.min(image.width, image.height);
-      const sourceX = (image.width - sourceSize) / 2;
-      const sourceY = (image.height - sourceSize) / 2;
-
-      ctx.drawImage(
-        image,
-        sourceX,
-        sourceY,
-        sourceSize,
-        sourceSize,
-        0,
-        0,
-        size,
-        size
-      );
-
-      canvas.toBlob(
-        (blob) => {
-          if (!blob) {
-            reject(new Error("썸네일 생성 실패"));
-            return;
-          }
-
-          resolve(blob);
-        },
-        "image/webp",
-        0.72
-      );
-    };
-
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("이미지를 불러오지 못했습니다."));
-    };
-
-    image.src = url;
-  });
-}
-
 function formatCreatedAt(value: string) {
   const date = new Date(value);
 
@@ -786,42 +726,9 @@ export function PhotoUploadPage() {
       throw new UploadRequestError(await getUploadError(response), response.status);
     }
 
-    const uploaded = (await response.json()) as {
-      id: string;
-      fileId: string;
-    };
+    await response.json();
 
-      onOriginalUploaded?.();
-
-      if (getMediaType(item.file) === "image") {
-        try {
-          const thumbnailBlob = await createImageThumbnail(item.file);
-          const thumbnailParams = new URLSearchParams({
-            recordId: uploaded.id,
-            originalFileId: uploaded.fileId,
-          });
-          const thumbnailResponse = await fetch(
-            `${PHOTO_UPLOAD_API_URL}/thumbnail?${thumbnailParams}`,
-            {
-              method: "POST",
-              headers: {
-                "content-type": "image/webp",
-                "x-upload-folder-key": uploaderFolder,
-              },
-              body: thumbnailBlob,
-            }
-          );
-
-          if (!thumbnailResponse.ok) {
-            console.warn(
-              "썸네일 업로드 실패:",
-              await getUploadError(thumbnailResponse)
-            );
-          }
-        } catch (error) {
-          console.warn("썸네일 생성 실패, 원본 업로드는 유지합니다:", error);
-        }
-      }
+    onOriginalUploaded?.();
 
     return;
   };
