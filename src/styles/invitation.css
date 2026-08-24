@@ -2182,7 +2182,10 @@ img {
 }
 
 .upload-entry-section.post-wedding .upload-entry-button {
-  box-shadow: 0 10px 24px rgba(180, 88, 111, 0.26);
+  background: #c96880;
+  color: #ffffff;
+  border-color: #c96880;
+  box-shadow: 0 10px 24px rgba(180, 88, 111, 0.32);
 }
 
 .photo-viewer-media {
@@ -5646,6 +5649,19 @@ img {
   background: #fff0f4;
   color: #8f5364;
   border: 1px solid #efccd5;
+}
+
+.footer-btn.rsvp-share.post-wedding-share {
+  width: min(112px, 28vw);
+  background: #c96880;
+  color: #ffffff;
+  border-color: #c96880;
+  box-shadow: 0 8px 20px rgba(180, 88, 111, 0.3);
+  font-weight: 800;
+}
+
+.footer-btn.rsvp-share.post-wedding-share:active {
+  background: #b85a72;
 }
 
 .footer-btn {

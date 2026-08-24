@@ -17,11 +17,11 @@ import {
 } from "./components/PhotoUploadSection";
 import { FooterSection } from "./components/FooterSection";
 import { RsvpPrompt } from "./components/RsvpPrompt";
-import { isPostWedding } from "./lib/weddingPhase";
+import { usePostWeddingPhase } from "./lib/weddingPhase";
 
 function App() {
   const [route, setRoute] = useState(window.location.hash);
-  const postWedding = isPostWedding();
+  const postWedding = usePostWeddingPhase();
 
   useEffect(() => {
     const handleHashChange = () => {

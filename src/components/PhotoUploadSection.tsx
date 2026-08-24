@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
-import { isPostWedding } from "../lib/weddingPhase";
+import { usePostWeddingPhase } from "../lib/weddingPhase";
 
 const PHOTO_UPLOAD_API_URL = String(
   import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
@@ -527,7 +527,7 @@ function formatCreatedAt(value: string) {
 }
 
 export function PhotoUploadSection() {
-  const postWedding = isPostWedding();
+  const postWedding = usePostWeddingPhase();
 
   const goUploadPage = () => {
     window.location.hash = "upload";
