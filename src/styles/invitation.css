@@ -432,6 +432,31 @@ img {
   font-weight: 700 !important;
 }
 
+.admin-photo-download-button {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 10001;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.admin-photo-download-button:active {
+  transform: translateY(1px);
+}
+
 .location-section {
   --location-accent: #d994a6;
   --location-accent-light: #f7dfe5;

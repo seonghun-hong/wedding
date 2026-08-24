@@ -10,6 +10,7 @@ import {
   Camera,
   ChevronLeft,
   ChevronRight,
+  Download,
   Plus,
   Search,
   X,
@@ -2596,6 +2597,24 @@ export function AdminPhotosPage() {
     return <PhotoViewerMedia key={item.id} item={item} />;
   };
 
+  const downloadOriginal = (item: AdminPhotoItem) => {
+    try {
+      const downloadUrl = new URL(item.photo_url);
+      const fileName = item.original_name || "wedding-original";
+
+      downloadUrl.searchParams.set("download", fileName);
+
+      const anchor = document.createElement("a");
+      anchor.href = downloadUrl.toString();
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    } catch {
+      showToast("원본 파일을 다운로드하지 못했습니다.");
+    }
+  };
+
   useEffect(() => {
     if (selectedIndex === null) {
       document.body.style.overflow = "";
@@ -3014,6 +3033,21 @@ const adminStats = summaries.reduce(
           >
             {selectedIndex + 1} / {photos.length}
           </div>
+
+          <button
+            className="admin-photo-download-button"
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              downloadOriginal(photos[selectedIndex]);
+            }}
+            title="원본 파일 다운로드"
+            aria-label="현재 원본 파일 다운로드"
+          >
+            <Download size={18} />
+            <span>원본 저장</span>
+          </button>
         </div>
       )}
 

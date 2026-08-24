@@ -475,6 +475,7 @@ async function driveThumbnail(request, env, id, ctx) {
 
 async function media(request, env, id) {
   if (!validFileId(id)) return new Response("Not found", { status: 404 });
+  const requestUrl = new URL(request.url);
   const requestHeaders = {};
   if (request.headers.get("range")) requestHeaders.range = request.headers.get("range");
   const response = await googleFetch(env, `${DRIVE_API}/files/${id}?alt=media`, {
@@ -491,6 +492,17 @@ async function media(request, env, id) {
   headers.set("cache-control", "public, max-age=31536000, immutable");
   headers.set("access-control-allow-origin", "*");
   headers.set("x-content-type-options", "nosniff");
+
+  if (requestUrl.searchParams.has("download")) {
+    const requestedName = clean(requestUrl.searchParams.get("download"), 180);
+    const downloadName = safeDriveName(requestedName || "wedding-original", 180);
+    const fallbackName = `wedding-original.${extension(downloadName)}`;
+    headers.set(
+      "content-disposition",
+      `attachment; filename="${fallbackName}"; filename*=UTF-8''${encodeURIComponent(downloadName)}`
+    );
+  }
+
   return new Response(request.method === "HEAD" ? null : response.body, { status: response.status, headers });
 }
 
