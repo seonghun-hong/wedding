@@ -97,6 +97,14 @@ type AdminPhotoItem = {
   created_at: string;
 };
 
+type ViewerMediaItem = {
+  id: string;
+  photo_url: string;
+  thumbnail_url: string | null;
+  media_type: string | null;
+  original_name: string | null;
+};
+
 type DriveStorageStats = {
   storage: {
     usageBytes: number;
@@ -127,6 +135,62 @@ class UploadRequestError extends Error {
     this.name = "UploadRequestError";
     this.status = status;
   }
+}
+
+function PhotoViewerMedia({ item }: { item: ViewerMediaItem }) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (item.media_type === "video") {
+    return (
+      <video
+        key={item.id}
+        src={item.photo_url}
+        controls
+        playsInline
+        preload="metadata"
+      />
+    );
+  }
+
+  return (
+    <div className="photo-viewer-media">
+      {!loaded && item.thumbnail_url && (
+        <img
+          className="photo-viewer-placeholder"
+          src={item.thumbnail_url}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          draggable={false}
+        />
+      )}
+
+      {!loaded && !failed && (
+        <div className="photo-viewer-loading" aria-live="polite">
+          <span />
+          <p>사진을 불러오는 중입니다</p>
+        </div>
+      )}
+
+      {failed && !item.thumbnail_url && (
+        <div className="photo-viewer-loading" role="status">
+          <p>사진을 불러오지 못했습니다</p>
+        </div>
+      )}
+
+      <img
+        className={`photo-viewer-original${loaded ? " is-loaded" : ""}`}
+        src={item.photo_url}
+        alt={item.original_name || "업로드 사진"}
+        loading="eager"
+        decoding="async"
+        draggable={false}
+        onLoad={() => setLoaded(true)}
+        onError={() => setFailed(true)}
+      />
+    </div>
+  );
 }
 
 function formatFileSize(size: number) {
@@ -1620,21 +1684,7 @@ export function MyPhotosPage() {
   };
 
   const renderViewerMedia = (item: MyUploadItem) => {
-    if (item.media_type === "video") {
-      return (
-        <video src={item.photo_url} controls playsInline preload="metadata" />
-      );
-    }
-
-    return (
-      <img
-        src={item.photo_url}
-        alt={item.original_name || "업로드 사진"}
-        loading="eager"
-        decoding="async"
-        draggable={false}
-      />
-    );
+    return <PhotoViewerMedia key={item.id} item={item} />;
   };
 
   useEffect(() => {
@@ -2317,21 +2367,7 @@ export function AdminPhotosPage() {
   };
 
   const renderViewerMedia = (item: AdminPhotoItem) => {
-    if (item.media_type === "video") {
-      return (
-        <video src={item.photo_url} controls playsInline preload="metadata" />
-      );
-    }
-
-    return (
-      <img
-        src={item.photo_url}
-        alt={item.original_name || "업로드 사진"}
-        loading="eager"
-        decoding="async"
-        draggable={false}
-      />
-    );
+    return <PhotoViewerMedia key={item.id} item={item} />;
   };
 
   useEffect(() => {

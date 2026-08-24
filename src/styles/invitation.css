@@ -2129,6 +2129,43 @@ img {
   box-sizing: border-box !important;
 }
 
+.photo-viewer-media {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.photo-viewer-media .photo-viewer-placeholder,
+.photo-viewer-media .photo-viewer-original {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+}
+
+.photo-viewer-media .photo-viewer-placeholder {
+  z-index: 1;
+  opacity: 0.72;
+  filter: blur(1px);
+}
+
+.photo-viewer-media .photo-viewer-original {
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+.photo-viewer-media .photo-viewer-original.is-loaded {
+  opacity: 1;
+}
+
+.photo-viewer-media .photo-viewer-loading {
+  z-index: 3;
+}
+
 .photo-viewer-panel img {
   width: auto !important;
   max-width: 100% !important;
