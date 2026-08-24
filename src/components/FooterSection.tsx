@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { CalendarDays, ClipboardCheck, Copy, Share2 } from "lucide-react";
+import { CalendarDays, Camera, ClipboardCheck, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
+import { isPostWedding } from "../lib/weddingPhase";
 import { downloadCalendar } from "../lib/calendar";
 import { copyText } from "../lib/clipboard";
 
@@ -16,6 +17,7 @@ const KAKAO_IMAGE_URL =
 
 export function FooterSection() {
   const [toast, setToast] = useState("");
+  const postWedding = isPostWedding();
 
   const showToast = (message: string) => {
     setToast(message);
@@ -76,6 +78,10 @@ export function FooterSection() {
     window.dispatchEvent(new Event("wedding:open-rsvp"));
   };
 
+  const openPhotoUpload = () => {
+    window.location.hash = "upload";
+  };
+
   return (
     <footer className="footer-section">
 <div className="footer-buttons">
@@ -109,10 +115,10 @@ export function FooterSection() {
   <button
     className="footer-btn rsvp-share"
     type="button"
-    onClick={openRsvp}
+    onClick={postWedding ? openPhotoUpload : openRsvp}
   >
-    <ClipboardCheck size={28} />
-    <span>참석여부</span>
+    {postWedding ? <Camera size={28} /> : <ClipboardCheck size={28} />}
+    <span>{postWedding ? "사진공유" : "참석여부"}</span>
   </button>
 </div>
 

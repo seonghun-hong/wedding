@@ -457,6 +457,33 @@ img {
   transform: translateY(1px);
 }
 
+.admin-photo-download-button.downloaded {
+  color: #9f5265;
+}
+
+.admin-photo-favorite-button {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 10001;
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #667085;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.admin-photo-favorite-button.active {
+  color: #d36f89;
+}
+
 .location-section {
   --location-accent: #d994a6;
   --location-accent-light: #f7dfe5;
@@ -2154,6 +2181,10 @@ img {
   box-sizing: border-box !important;
 }
 
+.upload-entry-section.post-wedding .upload-entry-button {
+  box-shadow: 0 10px 24px rgba(180, 88, 111, 0.26);
+}
+
 .photo-viewer-media {
   position: relative;
   width: 100%;
@@ -2525,6 +2556,170 @@ img {
   margin-top: 22px;
   display: grid;
   gap: 10px;
+}
+
+.admin-media-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(138px, auto);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.admin-media-search {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 11px;
+  border: 1px solid #e2e6eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #78818d;
+}
+
+.admin-media-search input,
+.admin-media-controls select {
+  min-width: 0;
+  min-height: 42px;
+  border: 0;
+  background: transparent;
+  color: #2f3740;
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.admin-media-search input {
+  width: 100%;
+}
+
+.admin-media-controls select {
+  padding: 0 30px 0 11px;
+  border: 1px solid #e2e6eb;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.admin-photo-tools {
+  margin-bottom: 14px;
+}
+
+.admin-photo-filters {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 8px;
+}
+
+.admin-photo-selection-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+  gap: 8px;
+}
+
+.admin-photo-selection-actions button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid #e0e4e9;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4a535e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-photo-selection-actions button.primary {
+  border-color: #cc8496;
+  background: #cc8496;
+  color: #ffffff;
+}
+
+.admin-photo-selection-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.admin-photo-card {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.admin-photo-card.selected {
+  outline-color: #d36f89;
+}
+
+.admin-photo-card .my-photo-gallery-item {
+  height: 100% !important;
+}
+
+.admin-photo-card-action {
+  position: absolute;
+  top: 6px;
+  z-index: 4;
+  width: 29px;
+  height: 29px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #5d6672;
+  box-shadow: 0 1px 4px rgba(20, 29, 38, 0.16);
+}
+
+.admin-photo-card-action.favorite {
+  left: 6px;
+}
+
+.admin-photo-card-action.select {
+  right: 6px;
+}
+
+.admin-photo-card-action.favorite.active {
+  color: #d36f89;
+}
+
+.admin-photo-card-action.select.active {
+  background: #cc8496;
+  color: #ffffff;
+}
+
+.admin-photo-downloaded-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  z-index: 3;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #8f4e5e;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+@media (max-width: 430px) {
+  .admin-media-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-photo-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-photo-selection-actions {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  }
+
+  .admin-photo-selection-actions button {
+    font-size: 12px;
+  }
 }
 
 .admin-uploader-card {

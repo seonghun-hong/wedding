@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -11,11 +12,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Heart,
   Plus,
   Search,
+  Square,
+  SquareCheckBig,
   X,
 } from "lucide-react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
+import { isPostWedding } from "../lib/weddingPhase";
 
 const PHOTO_UPLOAD_API_URL = String(
   import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
@@ -26,6 +31,8 @@ const MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024;
 const MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024;
 const SLIDE_DURATION = 260;
 const VIEWER_PREFETCH_DISTANCE = 2;
+const ADMIN_FAVORITES_KEY = "wedding_admin_favorite_photos";
+const ADMIN_DOWNLOADED_KEY = "wedding_admin_downloaded_photos";
 const IMAGE_EXTENSIONS = ["avif", "heic", "heif", "jpeg", "jpg", "png", "webp"];
 const VIDEO_EXTENSIONS = ["mov", "mp4", "webm"];
 const IMAGE_MIME_TYPES = new Set([
@@ -44,6 +51,15 @@ const VIDEO_MIME_TYPES = new Set([
 
 type UploadStatus = "waiting" | "uploading" | "success" | "error";
 type SlideTarget = "prev" | "next" | "center" | null;
+type AdminPhotoFilter =
+  | "all"
+  | "image"
+  | "video"
+  | "favorites"
+  | "downloaded"
+  | "not-downloaded";
+type AdminPhotoSort = "newest" | "oldest" | "name";
+type AdminUploaderSort = "latest" | "oldest" | "name";
 
 type UploadFileItem = {
   id: string;
@@ -136,6 +152,23 @@ class UploadRequestError extends Error {
     super(message);
     this.name = "UploadRequestError";
     this.status = status;
+  }
+}
+
+function getStoredIdSet(key: string) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return new Set<string>(Array.isArray(value) ? value : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function storeIdSet(key: string, values: Set<string>) {
+  try {
+    localStorage.setItem(key, JSON.stringify([...values]));
+  } catch {
+    // Private browsing or strict storage settings may block localStorage.
   }
 }
 
@@ -494,15 +527,19 @@ function formatCreatedAt(value: string) {
 }
 
 export function PhotoUploadSection() {
+  const postWedding = isPostWedding();
+
   const goUploadPage = () => {
     window.location.hash = "upload";
   };
 
   return (
-    <section className="section upload-entry-section">
+    <section className={`section upload-entry-section${postWedding ? " post-wedding" : ""}`}>
       <div className="upload-entry-heading">
-        <p className="upload-entry-script">Photo Share</p>
-        <h2 className="upload-entry-title">소중한 순간 공유</h2>
+        <p className="upload-entry-script">{postWedding ? "Wedding Album" : "Photo Share"}</p>
+        <h2 className="upload-entry-title">
+          {postWedding ? "오늘의 순간 공유" : "소중한 순간 공유"}
+        </h2>
       </div>
 
       <div className="upload-entry-icon-wrap">
@@ -512,7 +549,7 @@ export function PhotoUploadSection() {
       </div>
 
       <p className="upload-entry-desc">
-        결혼식 현장에서 찍은 사진들을
+        {postWedding ? "함께한 오늘의 사진과 동영상을" : "결혼식 현장에서 찍은 사진들을"}
         <br />
         신랑신부와 함께 나눠보세요
       </p>
@@ -2227,6 +2264,17 @@ export function AdminPhotosPage() {
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [toast, setToast] = useState("");
+  const [uploaderQuery, setUploaderQuery] = useState("");
+  const [uploaderSort, setUploaderSort] = useState<AdminUploaderSort>("latest");
+  const [photoFilter, setPhotoFilter] = useState<AdminPhotoFilter>("all");
+  const [photoSort, setPhotoSort] = useState<AdminPhotoSort>("newest");
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() =>
+    getStoredIdSet(ADMIN_FAVORITES_KEY)
+  );
+  const [downloadedIds, setDownloadedIds] = useState<Set<string>>(() =>
+    getStoredIdSet(ADMIN_DOWNLOADED_KEY)
+  );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const selectedIndexRef = useRef<number | null>(null);
   const startXRef = useRef<number | null>(null);
@@ -2241,6 +2289,60 @@ export function AdminPhotosPage() {
     selectedIndexRef.current = selectedIndex;
   }, [selectedIndex]);
 
+  useEffect(() => {
+    storeIdSet(ADMIN_FAVORITES_KEY, favoriteIds);
+  }, [favoriteIds]);
+
+  useEffect(() => {
+    storeIdSet(ADMIN_DOWNLOADED_KEY, downloadedIds);
+  }, [downloadedIds]);
+
+  const visibleSummaries = useMemo(() => {
+    const query = uploaderQuery.trim().toLocaleLowerCase("ko-KR");
+    const filtered = summaries.filter((summary) => {
+      if (!query) return true;
+      return [summary.uploader_name, summary.uploader_phone]
+        .some((value) => String(value || "").toLocaleLowerCase("ko-KR").includes(query));
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (uploaderSort === "name") {
+        return String(left.uploader_name || "").localeCompare(
+          String(right.uploader_name || ""),
+          "ko-KR"
+        );
+      }
+
+      const leftTime = new Date(left.last_uploaded_at).getTime();
+      const rightTime = new Date(right.last_uploaded_at).getTime();
+      return uploaderSort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
+    });
+  }, [summaries, uploaderQuery, uploaderSort]);
+
+  const visiblePhotos = useMemo(() => {
+    const filtered = photos.filter((item) => {
+      if (photoFilter === "image") return item.media_type !== "video";
+      if (photoFilter === "video") return item.media_type === "video";
+      if (photoFilter === "favorites") return favoriteIds.has(item.id);
+      if (photoFilter === "downloaded") return downloadedIds.has(item.id);
+      if (photoFilter === "not-downloaded") return !downloadedIds.has(item.id);
+      return true;
+    });
+
+    return [...filtered].sort((left, right) => {
+      if (photoSort === "name") {
+        return String(left.original_name || "").localeCompare(
+          String(right.original_name || ""),
+          "ko-KR"
+        );
+      }
+
+      const leftTime = new Date(left.created_at).getTime();
+      const rightTime = new Date(right.created_at).getTime();
+      return photoSort === "oldest" ? leftTime - rightTime : rightTime - leftTime;
+    });
+  }, [photos, photoFilter, photoSort, favoriteIds, downloadedIds]);
+
   const showToast = (message: string) => {
     setToast(message);
     window.setTimeout(() => setToast(""), 1600);
@@ -2251,11 +2353,11 @@ export function AdminPhotosPage() {
   };
 
   const getPrevIndex = (index: number) => {
-    return index === 0 ? photos.length - 1 : index - 1;
+    return index === 0 ? visiblePhotos.length - 1 : index - 1;
   };
 
   const getNextIndex = (index: number) => {
-    return index === photos.length - 1 ? 0 : index + 1;
+    return index === visiblePhotos.length - 1 ? 0 : index + 1;
   };
 
   const clearAnimationTimer = () => {
@@ -2334,7 +2436,7 @@ export function AdminPhotosPage() {
       return;
     }
 
-    if (target !== "center" && photos.length <= 1) {
+    if (target !== "center" && visiblePhotos.length <= 1) {
       return;
     }
 
@@ -2555,6 +2657,7 @@ export function AdminPhotosPage() {
       setDriveStats(nextDriveStats);
       setSelectedUploader(null);
       setPhotos([]);
+      setSelectedIds(new Set());
       closeViewer();
     } finally {
       setLoadingSummary(false);
@@ -2570,6 +2673,7 @@ export function AdminPhotosPage() {
     setLoadingPhotos(true);
     setSelectedUploader(summary);
     setPhotos([]);
+    setSelectedIds(new Set());
     closeViewer();
 
     try {
@@ -2597,7 +2701,7 @@ export function AdminPhotosPage() {
     return <PhotoViewerMedia key={item.id} item={item} />;
   };
 
-  const downloadOriginal = (item: AdminPhotoItem) => {
+  const triggerOriginalDownload = (item: AdminPhotoItem) => {
     try {
       const downloadUrl = new URL(item.photo_url);
       const fileName = item.original_name || "wedding-original";
@@ -2610,9 +2714,71 @@ export function AdminPhotosPage() {
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
+      return true;
     } catch {
+      return false;
+    }
+  };
+
+  const markDownloaded = (ids: string[]) => {
+    setDownloadedIds((current) => new Set([...current, ...ids]));
+  };
+
+  const downloadOriginal = (item: AdminPhotoItem) => {
+    if (triggerOriginalDownload(item)) {
+      if (photoFilter === "not-downloaded") closeViewer();
+      markDownloaded([item.id]);
+    } else {
       showToast("원본 파일을 다운로드하지 못했습니다.");
     }
+  };
+
+  const toggleFavorite = (id: string) => {
+    setFavoriteIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAllVisible = () => {
+    const visibleIds = visiblePhotos.map((item) => item.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      visibleIds.forEach((id) => {
+        if (allSelected) next.delete(id);
+        else next.add(id);
+      });
+      return next;
+    });
+  };
+
+  const downloadSelected = () => {
+    const targets = photos.filter((item) => selectedIds.has(item.id));
+
+    if (targets.length === 0) {
+      showToast("다운로드할 파일을 선택해주세요.");
+      return;
+    }
+
+    targets.forEach((item, index) => {
+      window.setTimeout(() => triggerOriginalDownload(item), index * 450);
+    });
+    markDownloaded(targets.map((item) => item.id));
+    setSelectedIds(new Set());
+    showToast(`원본 ${targets.length}개 다운로드를 시작했습니다.`);
   };
 
   useEffect(() => {
@@ -2677,7 +2843,7 @@ export function AdminPhotosPage() {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedIndex, photos]);
+  }, [selectedIndex, visiblePhotos]);
 
   useEffect(() => {
     return () => {
@@ -2686,12 +2852,12 @@ export function AdminPhotosPage() {
   }, []);
 
   const prevIndex =
-    selectedIndex !== null && photos.length > 0
+    selectedIndex !== null && visiblePhotos.length > 0
       ? getPrevIndex(selectedIndex)
       : null;
 
   const nextIndex =
-    selectedIndex !== null && photos.length > 0
+    selectedIndex !== null && visiblePhotos.length > 0
       ? getNextIndex(selectedIndex)
       : null;
 
@@ -2859,9 +3025,33 @@ const adminStats = summaries.reduce(
 
       {summaries.length > 0 && (
         <div className="admin-uploader-list">
-          <p className="upload-preview-count">업로더 {summaries.length}명</p>
+          <div className="admin-media-controls">
+            <label className="admin-media-search">
+              <Search size={16} />
+              <input
+                type="search"
+                value={uploaderQuery}
+                onChange={(event) => setUploaderQuery(event.target.value)}
+                placeholder="이름 또는 연락처 검색"
+              />
+            </label>
+            <select
+              aria-label="업로더 정렬"
+              value={uploaderSort}
+              onChange={(event) => setUploaderSort(event.target.value as AdminUploaderSort)}
+            >
+              <option value="latest">최근 업로드순</option>
+              <option value="oldest">오래된 업로드순</option>
+              <option value="name">이름순</option>
+            </select>
+          </div>
 
-          {summaries.map((summary) => (
+          <p className="upload-preview-count">
+            업로더 {visibleSummaries.length}명
+            {visibleSummaries.length !== summaries.length && ` / 전체 ${summaries.length}명`}
+          </p>
+
+          {visibleSummaries.map((summary) => (
             <button
               className={`admin-uploader-card ${
                 selectedUploader?.uploader_folder_key ===
@@ -2901,44 +3091,132 @@ const adminStats = summaries.reduce(
 
       {photos.length > 0 && (
         <div className="my-photos-result-section gallery-section">
-          <p className="upload-preview-count">업로드 파일 {photos.length}개</p>
+          <div className="admin-photo-tools">
+            <div className="admin-media-controls admin-photo-filters">
+              <select
+                aria-label="파일 필터"
+                value={photoFilter}
+                onChange={(event) => {
+                  setPhotoFilter(event.target.value as AdminPhotoFilter);
+                  closeViewer();
+                }}
+              >
+                <option value="all">전체 파일</option>
+                <option value="image">사진만</option>
+                <option value="video">동영상만</option>
+                <option value="favorites">즐겨찾기</option>
+                <option value="downloaded">저장 완료</option>
+                <option value="not-downloaded">저장 안 함</option>
+              </select>
+              <select
+                aria-label="파일 정렬"
+                value={photoSort}
+                onChange={(event) => {
+                  setPhotoSort(event.target.value as AdminPhotoSort);
+                  closeViewer();
+                }}
+              >
+                <option value="newest">최신순</option>
+                <option value="oldest">오래된순</option>
+                <option value="name">파일명순</option>
+              </select>
+            </div>
+
+            <div className="admin-photo-selection-actions">
+              <button type="button" onClick={toggleSelectAllVisible}>
+                {visiblePhotos.length > 0 && visiblePhotos.every((item) => selectedIds.has(item.id)) ? (
+                  <SquareCheckBig size={17} />
+                ) : (
+                  <Square size={17} />
+                )}
+                <span>현재 목록 전체</span>
+              </button>
+              <button
+                className="primary"
+                type="button"
+                onClick={downloadSelected}
+                disabled={selectedIds.size === 0}
+              >
+                <Download size={17} />
+                <span>선택 원본 {selectedIds.size}개 저장</span>
+              </button>
+            </div>
+          </div>
+
+          <p className="upload-preview-count">
+            파일 {visiblePhotos.length}개
+            {visiblePhotos.length !== photos.length && ` / 전체 ${photos.length}개`}
+          </p>
 
           <div className="gallery-grid my-photos-gallery-grid">
-            {photos.map((item, index) => (
-              <button
-                className="gallery-item my-photo-gallery-item"
+            {visiblePhotos.map((item, index) => (
+              <div
+                className={`admin-photo-card${selectedIds.has(item.id) ? " selected" : ""}`}
                 key={item.id}
-                type="button"
-                onClick={() => openViewer(index)}
               >
-                {item.media_type === "video" ? (
-                  <video
-                    src={item.photo_url}
-                    muted
-                    playsInline
-                    preload="metadata"
-                  />
-                ) : (
-                  <img
-                    src={item.thumbnail_url || item.photo_url}
-                    alt={item.original_name || "업로드 사진"}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                )}
+                <button
+                  className="gallery-item my-photo-gallery-item"
+                  type="button"
+                  onClick={() => openViewer(index)}
+                >
+                  {item.media_type === "video" ? (
+                    <video
+                      src={item.photo_url}
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={item.thumbnail_url || item.photo_url}
+                      alt={item.original_name || "업로드 사진"}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  )}
 
-                {item.media_type === "video" && (
-                  <span className="my-photo-video-badge">VIDEO</span>
-                )}
-              </button>
+                  {item.media_type === "video" && (
+                    <span className="my-photo-video-badge">VIDEO</span>
+                  )}
+                  {downloadedIds.has(item.id) && (
+                    <span className="admin-photo-downloaded-badge">저장됨</span>
+                  )}
+                </button>
+
+                <button
+                  className={`admin-photo-card-action favorite${favoriteIds.has(item.id) ? " active" : ""}`}
+                  type="button"
+                  onClick={() => toggleFavorite(item.id)}
+                  title={favoriteIds.has(item.id) ? "즐겨찾기 해제" : "즐겨찾기"}
+                  aria-label={favoriteIds.has(item.id) ? "즐겨찾기 해제" : "즐겨찾기"}
+                >
+                  <Heart size={17} fill={favoriteIds.has(item.id) ? "currentColor" : "none"} />
+                </button>
+                <button
+                  className={`admin-photo-card-action select${selectedIds.has(item.id) ? " active" : ""}`}
+                  type="button"
+                  onClick={() => toggleSelected(item.id)}
+                  title={selectedIds.has(item.id) ? "선택 해제" : "다운로드 선택"}
+                  aria-label={selectedIds.has(item.id) ? "선택 해제" : "다운로드 선택"}
+                >
+                  {selectedIds.has(item.id) ? <SquareCheckBig size={17} /> : <Square size={17} />}
+                </button>
+              </div>
             ))}
           </div>
+
+          {visiblePhotos.length === 0 && (
+            <p className="upload-lookup-empty">조건에 맞는 파일이 없습니다.</p>
+          )}
         </div>
       )}
 
       {toast && <div className="toast">{toast}</div>}
 
-      {selectedIndex !== null && prevIndex !== null && nextIndex !== null && (
+      {selectedIndex !== null &&
+        selectedIndex < visiblePhotos.length &&
+        prevIndex !== null &&
+        nextIndex !== null && (
         <div
           className="image-modal photo-viewer-modal"
           onClick={closeViewer}
@@ -2958,7 +3236,7 @@ const adminStats = summaries.reduce(
             ×
           </button>
 
-          {photos.length > 1 && (
+          {visiblePhotos.length > 1 && (
             <button
               className="gallery-slide-button gallery-slide-prev"
               type="button"
@@ -2994,20 +3272,20 @@ const adminStats = summaries.reduce(
               }}
             >
               <div className="photo-viewer-panel">
-                {renderViewerMedia(photos[prevIndex])}
+                {renderViewerMedia(visiblePhotos[prevIndex])}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(photos[selectedIndex])}
+                {renderViewerMedia(visiblePhotos[selectedIndex])}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(photos[nextIndex])}
+                {renderViewerMedia(visiblePhotos[nextIndex])}
               </div>
             </div>
           </div>
 
-          {photos.length > 1 && (
+          {visiblePhotos.length > 1 && (
             <button
               className="gallery-slide-button gallery-slide-next"
               type="button"
@@ -3031,22 +3309,49 @@ const adminStats = summaries.reduce(
               event.stopPropagation();
             }}
           >
-            {selectedIndex + 1} / {photos.length}
+            {selectedIndex + 1} / {visiblePhotos.length}
           </div>
 
           <button
-            className="admin-photo-download-button"
+            className={`admin-photo-favorite-button${favoriteIds.has(visiblePhotos[selectedIndex].id) ? " active" : ""}`}
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.stopPropagation();
-              downloadOriginal(photos[selectedIndex]);
+              if (
+                photoFilter === "favorites" &&
+                favoriteIds.has(visiblePhotos[selectedIndex].id)
+              ) {
+                closeViewer();
+              }
+              toggleFavorite(visiblePhotos[selectedIndex].id);
+            }}
+            title="즐겨찾기"
+            aria-label="현재 파일 즐겨찾기"
+          >
+            <Heart
+              size={20}
+              fill={favoriteIds.has(visiblePhotos[selectedIndex].id) ? "currentColor" : "none"}
+            />
+          </button>
+
+          <button
+            className={`admin-photo-download-button${downloadedIds.has(visiblePhotos[selectedIndex].id) ? " downloaded" : ""}`}
+            type="button"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              downloadOriginal(visiblePhotos[selectedIndex]);
             }}
             title="원본 파일 다운로드"
             aria-label="현재 원본 파일 다운로드"
           >
-            <Download size={18} />
-            <span>원본 저장</span>
+            {downloadedIds.has(visiblePhotos[selectedIndex].id) ? (
+              <SquareCheckBig size={18} />
+            ) : (
+              <Download size={18} />
+            )}
+            <span>{downloadedIds.has(visiblePhotos[selectedIndex].id) ? "저장 완료" : "원본 저장"}</span>
           </button>
         </div>
       )}
