@@ -4,6 +4,7 @@ const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
 const DEFAULT_MAX_IMAGE_FILE_BYTES = 30 * 1024 * 1024;
 const DEFAULT_MAX_VIDEO_FILE_BYTES = 100 * 1024 * 1024;
 const DEFAULT_MAX_STORAGE_BYTES = 13 * 1024 * 1024 * 1024;
+const THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/avif",
 ]);
@@ -88,10 +89,10 @@ function driveTimestamp(value = Date.now()) {
   return date.toISOString().slice(0, 19).replace("T", "_").replace(/:/g, "-");
 }
 
-function driveFileName(originalName, value = Date.now()) {
+function driveFileName(originalName, value = Date.now(), thumbnail = false) {
   const ext = extension(originalName);
   const base = safeDriveName(originalName.replace(/\.[^.]+$/, ""));
-  return `${driveTimestamp(value)}_${base}.${ext}`;
+  return `${driveTimestamp(value)}_${base}${thumbnail ? "_thumb.webp" : `.${ext}`}`;
 }
 
 function uploaderFolderName(uploaderName, uploaderPhone) {
@@ -352,6 +353,80 @@ async function originalUpload(request, env, origin) {
   }
 }
 
+async function findPhoto(env, recordId, originalFileId) {
+  const url = new URL(`${env.SUPABASE_URL}/rest/v1/uploaded_photos`);
+  url.searchParams.set(
+    "select",
+    "id,uploader_name,uploader_phone,uploader_folder_key,original_name,created_at,media_type,thumbnail_storage_path"
+  );
+  url.searchParams.set("id", `eq.${recordId}`);
+  url.searchParams.set("storage_path", `eq.gdrive:${originalFileId}`);
+  url.searchParams.set("limit", "1");
+  const response = await fetch(url, { headers: supabaseHeaders(env) });
+  return response.ok ? (await response.json())[0] : null;
+}
+
+async function thumbnailUpload(request, env, origin) {
+  const url = new URL(request.url);
+  const recordId = clean(url.searchParams.get("recordId"), 36);
+  const originalFileId = clean(url.searchParams.get("originalFileId"), 200);
+  const folderKey = clean(request.headers.get("x-upload-folder-key"), 160);
+  const size = Number(request.headers.get("content-length") || 0);
+
+  if (!validUuid(recordId) || !validFileId(originalFileId) || !validFolderKey(folderKey)) {
+    return json({ error: "썸네일 대상이 올바르지 않습니다." }, 400, cors(origin));
+  }
+  if (request.headers.get("content-type") !== "image/webp") {
+    return json({ error: "WebP 썸네일만 허용됩니다." }, 415, cors(origin));
+  }
+  if (!Number.isFinite(size) || size <= 0 || size > THUMBNAIL_MAX_BYTES) {
+    return json({ error: "썸네일 크기가 올바르지 않습니다." }, 413, cors(origin));
+  }
+
+  const photo = await findPhoto(env, recordId, originalFileId);
+  if (!photo || photo.uploader_folder_key !== folderKey || photo.media_type !== "image") {
+    return json({ error: "원본 사진을 찾지 못했습니다." }, 404, cors(origin));
+  }
+  if (photo.thumbnail_storage_path) {
+    return json({ error: "이미 썸네일이 생성된 사진입니다." }, 409, cors(origin));
+  }
+
+  let thumbnail;
+  try {
+    const uploaderFolderId = await ensureUploaderFolder(
+      env,
+      env.GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID,
+      photo.uploader_name,
+      photo.uploader_phone,
+      photo.uploader_folder_key
+    );
+    thumbnail = await uploadToDrive(
+      env,
+      request,
+      uploaderFolderId,
+      driveFileName(photo.original_name, photo.created_at, true),
+      "image/webp",
+      size
+    );
+    const thumbnailUrl = `${new URL(request.url).origin}/media/${thumbnail.id}`;
+    const updateUrl = new URL(`${env.SUPABASE_URL}/rest/v1/uploaded_photos`);
+    updateUrl.searchParams.set("id", `eq.${recordId}`);
+    const updated = await fetch(updateUrl, {
+      method: "PATCH",
+      headers: supabaseHeaders(env),
+      body: JSON.stringify({
+        thumbnail_url: thumbnailUrl,
+        thumbnail_storage_path: `gdrive:${thumbnail.id}`,
+      }),
+    });
+    if (!updated.ok) throw new Error(`썸네일 목록 저장 실패 (${updated.status})`);
+    return json({ thumbnailUrl }, 201, cors(origin));
+  } catch (error) {
+    if (thumbnail?.id) await deleteDriveFile(env, thumbnail.id).catch(() => undefined);
+    throw error;
+  }
+}
+
 async function driveThumbnail(request, env, id, ctx) {
   if (!validFileId(id)) return new Response("Not found", { status: 404 });
 
@@ -520,7 +595,7 @@ async function adminStorageStats(request, env, origin) {
 function missingSettings(env) {
   return [
     "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN",
-    "GOOGLE_DRIVE_ORIGINALS_FOLDER_ID",
+    "GOOGLE_DRIVE_ORIGINALS_FOLDER_ID", "GOOGLE_DRIVE_THUMBNAILS_FOLDER_ID",
     "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "ALLOWED_ORIGINS",
   ].filter((key) => !env[key]);
 }
@@ -581,7 +656,8 @@ export default {
         return limited || await originalUpload(request, env, origin);
       }
       if (url.pathname === "/thumbnail" && request.method === "POST") {
-        return json({ error: "썸네일은 자동으로 생성됩니다." }, 410, cors(origin));
+        const limited = await uploadRateLimit(request, env, origin);
+        return limited || await thumbnailUpload(request, env, origin);
       }
       if (url.pathname === "/admin/storage-stats" && request.method === "GET") return await adminStorageStats(request, env, origin);
       return json({ error: "Not found" }, 404, cors(origin));

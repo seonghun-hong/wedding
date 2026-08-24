@@ -445,6 +445,53 @@ async function createPasswordHash(password: string) {
   return hashArray.map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function createImageThumbnail(file: File) {
+  return new Promise<Blob>((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+
+      const maxDimension = 960;
+      const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+      const width = Math.max(1, Math.round(image.width * scale));
+      const height = Math.max(1, Math.round(image.height * scale));
+      const canvas = document.createElement("canvas");
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        reject(new Error("썸네일을 만들 수 없습니다."));
+        return;
+      }
+
+      context.drawImage(image, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("썸네일을 만들 수 없습니다."));
+          }
+        },
+        "image/webp",
+        0.72
+      );
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("썸네일용 사진을 불러오지 못했습니다."));
+    };
+
+    image.src = url;
+  });
+}
+
 function formatCreatedAt(value: string) {
   const date = new Date(value);
 
@@ -810,9 +857,39 @@ export function PhotoUploadPage() {
       throw new UploadRequestError(await getUploadError(response), response.status);
     }
 
-    await response.json();
+    const uploaded = (await response.json()) as {
+      id: string;
+      fileId: string;
+    };
 
     onOriginalUploaded?.();
+
+    if (getMediaType(item.file) === "image") {
+      try {
+        const thumbnailBlob = await createImageThumbnail(item.file);
+        const thumbnailParams = new URLSearchParams({
+          recordId: uploaded.id,
+          originalFileId: uploaded.fileId,
+        });
+        const thumbnailResponse = await fetch(
+          `${PHOTO_UPLOAD_API_URL}/thumbnail?${thumbnailParams}`,
+          {
+            method: "POST",
+            headers: {
+              "content-type": "image/webp",
+              "x-upload-folder-key": uploaderFolder,
+            },
+            body: thumbnailBlob,
+          }
+        );
+
+        if (!thumbnailResponse.ok) {
+          console.warn("썸네일 업로드 실패:", await getUploadError(thumbnailResponse));
+        }
+      } catch (error) {
+        console.warn("썸네일 생성 실패, 원본 업로드는 유지합니다:", error);
+      }
+    }
 
     return;
   };
