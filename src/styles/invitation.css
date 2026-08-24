@@ -2139,17 +2139,11 @@ img {
   overflow: hidden;
 }
 
-.photo-viewer-media .photo-viewer-fallback,
 .photo-viewer-media .photo-viewer-placeholder,
 .photo-viewer-media .photo-viewer-original {
   position: absolute;
   inset: 0;
   margin: auto;
-}
-
-.photo-viewer-media .photo-viewer-fallback {
-  z-index: 0;
-  opacity: 1;
 }
 
 .photo-viewer-media .photo-viewer-placeholder {

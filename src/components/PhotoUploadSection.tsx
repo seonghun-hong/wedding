@@ -138,13 +138,7 @@ class UploadRequestError extends Error {
   }
 }
 
-function PhotoViewerMedia({
-  item,
-  fallbackSrc,
-}: {
-  item: ViewerMediaItem;
-  fallbackSrc?: string;
-}) {
+function PhotoViewerMedia({ item }: { item: ViewerMediaItem }) {
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
   const [previewLoaded, setPreviewLoaded] = useState(false);
@@ -163,17 +157,6 @@ function PhotoViewerMedia({
 
   return (
     <div className="photo-viewer-media">
-      {!loaded && fallbackSrc && (
-        <img
-          className="photo-viewer-fallback"
-          src={fallbackSrc}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          draggable={false}
-        />
-      )}
-
       {!loaded && item.thumbnail_url && (
         <img
           className={`photo-viewer-placeholder${previewLoaded ? " is-loaded" : ""}`}
@@ -1896,12 +1879,27 @@ export function MyPhotosPage() {
     }
   };
 
-  const renderViewerMedia = (item: MyUploadItem, fallbackSrc?: string) => {
+  const renderViewerMedia = (item: MyUploadItem, label: string) => {
+    if (item.media_type === "video") {
+      return (
+        <video
+          key={item.id}
+          src={item.photo_url}
+          controls
+          playsInline
+          preload="metadata"
+        />
+      );
+    }
+
     return (
-      <PhotoViewerMedia
+      <img
         key={item.id}
-        item={item}
-        fallbackSrc={fallbackSrc}
+        src={item.thumbnail_url || item.photo_url}
+        alt={label}
+        draggable={false}
+        loading="eager"
+        decoding="async"
       />
     );
   };
@@ -1988,10 +1986,6 @@ export function MyPhotosPage() {
     selectedIndex !== null && myUploads.length > 0
       ? getNextIndex(selectedIndex)
       : null;
-  const currentViewerFallback = selectedIndex !== null
-    ? myUploads[selectedIndex]?.thumbnail_url || myUploads[selectedIndex]?.photo_url
-    : undefined;
-
   return (
     <section className="section my-photos-page-section">
       <button className="upload-back-button" onClick={goBackUpload}>
@@ -2167,15 +2161,15 @@ export function MyPhotosPage() {
               }}
             >
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[prevIndex], currentViewerFallback)}
+                {renderViewerMedia(myUploads[prevIndex], `이전 사진 ${prevIndex + 1}`)}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[selectedIndex], currentViewerFallback)}
+                {renderViewerMedia(myUploads[selectedIndex], `확대 사진 ${selectedIndex + 1}`)}
               </div>
 
               <div className="photo-viewer-panel">
-                {renderViewerMedia(myUploads[nextIndex], currentViewerFallback)}
+                {renderViewerMedia(myUploads[nextIndex], `다음 사진 ${nextIndex + 1}`)}
               </div>
             </div>
           </div>
