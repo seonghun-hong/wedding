@@ -1,11 +1,15 @@
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3";
 const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3";
-const DEFAULT_MAX_FILE_BYTES = 30 * 1024 * 1024;
+const DEFAULT_MAX_IMAGE_FILE_BYTES = 30 * 1024 * 1024;
+const DEFAULT_MAX_VIDEO_FILE_BYTES = 90 * 1024 * 1024;
 const DEFAULT_MAX_STORAGE_BYTES = 13 * 1024 * 1024 * 1024;
 const THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024;
 const IMAGE_TYPES = new Set([
   "image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/avif",
+]);
+const VIDEO_TYPES = new Set([
+  "video/mp4", "video/quicktime", "video/webm",
 ]);
 
 let cachedToken = null;
@@ -100,8 +104,33 @@ function uploaderFolderName(uploaderName, uploaderPhone) {
   return phone ? `${name}_${phone}` : name;
 }
 
-function validImage(type, fileName) {
-  return IMAGE_TYPES.has(type) || ["jpg", "jpeg", "png", "webp", "heic", "heif", "avif"].includes(extension(fileName));
+function mediaType(type, fileName) {
+  const ext = extension(fileName);
+  const typeKind = IMAGE_TYPES.has(type)
+    ? "image"
+    : VIDEO_TYPES.has(type)
+      ? "video"
+      : null;
+  const extensionKind = ["jpg", "jpeg", "png", "webp", "heic", "heif", "avif"].includes(ext)
+    ? "image"
+    : ["mp4", "mov", "webm"].includes(ext)
+      ? "video"
+      : null;
+
+  if (typeKind && extensionKind && typeKind !== extensionKind) return null;
+  return typeKind || extensionKind;
+}
+
+function safeContentType(kind, type, fileName) {
+  if (kind === "image" && IMAGE_TYPES.has(type)) return type;
+  if (kind === "video" && VIDEO_TYPES.has(type)) return type;
+
+  const byExtension = {
+    jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp",
+    heic: "image/heic", heif: "image/heif", avif: "image/avif",
+    mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm",
+  };
+  return byExtension[extension(fileName)] || "application/octet-stream";
 }
 
 function validFolderKey(value) {
@@ -258,7 +287,14 @@ async function originalUpload(request, env, origin) {
   const originalName = decodedHeader(request, "x-upload-original-name", 180);
   const type = clean(request.headers.get("content-type"), 80).toLowerCase();
   const size = Number(request.headers.get("content-length") || 0);
-  const maxFile = numberSetting(env.MAX_FILE_BYTES, DEFAULT_MAX_FILE_BYTES);
+  const kind = mediaType(type, originalName);
+  const uploadType = kind ? safeContentType(kind, type, originalName) : type;
+  const maxImage = numberSetting(
+    env.MAX_IMAGE_FILE_BYTES || env.MAX_FILE_BYTES,
+    DEFAULT_MAX_IMAGE_FILE_BYTES
+  );
+  const maxVideo = numberSetting(env.MAX_VIDEO_FILE_BYTES, DEFAULT_MAX_VIDEO_FILE_BYTES);
+  const maxFile = kind === "video" ? maxVideo : maxImage;
 
   if (!uploaderName || !originalName || !validFolderKey(folderKey) || !validUuid(groupId)) {
     return json({ error: "업로더 또는 파일 정보가 올바르지 않습니다." }, 400, cors(origin));
@@ -266,9 +302,9 @@ async function originalUpload(request, env, origin) {
   if (passwordHash && !/^[0-9a-f]{64}$/i.test(passwordHash)) {
     return json({ error: "비밀번호 정보가 올바르지 않습니다." }, 400, cors(origin));
   }
-  if (!validImage(type, originalName)) return json({ error: "사진 파일만 올릴 수 있습니다." }, 415, cors(origin));
+  if (!kind) return json({ error: "지원하지 않는 사진 또는 동영상 형식입니다." }, 415, cors(origin));
   if (!Number.isFinite(size) || size <= 0 || size > maxFile) {
-    return json({ error: `사진은 개당 ${Math.floor(maxFile / 1024 / 1024)}MB 이하여야 합니다.` }, 413, cors(origin));
+    return json({ error: `${kind === "video" ? "동영상" : "사진"}은 개당 ${Math.floor(maxFile / 1024 / 1024)}MB 이하여야 합니다.` }, 413, cors(origin));
   }
   const quota = await driveUsage(env);
   const configuredLimit = numberSetting(env.MAX_STORAGE_BYTES, DEFAULT_MAX_STORAGE_BYTES);
@@ -288,7 +324,7 @@ async function originalUpload(request, env, origin) {
     );
     driveFile = await uploadToDrive(
       env, request, uploaderFolderId,
-      driveFileName(originalName), type, size
+      driveFileName(originalName), uploadType, size
     );
     const photoUrl = `${new URL(request.url).origin}/media/${driveFile.id}`;
     const row = await insertPhoto(env, {
@@ -303,7 +339,7 @@ async function originalUpload(request, env, origin) {
       storage_path: `gdrive:${driveFile.id}`,
       thumbnail_url: null,
       thumbnail_storage_path: null,
-      media_type: "image",
+      media_type: kind,
       original_name: originalName,
       file_size: size,
       visible: true,
@@ -317,7 +353,10 @@ async function originalUpload(request, env, origin) {
 
 async function findPhoto(env, recordId, originalFileId) {
   const url = new URL(`${env.SUPABASE_URL}/rest/v1/uploaded_photos`);
-  url.searchParams.set("select", "id,uploader_name,uploader_phone,uploader_folder_key,original_name,created_at");
+  url.searchParams.set(
+    "select",
+    "id,uploader_name,uploader_phone,uploader_folder_key,original_name,created_at,thumbnail_storage_path"
+  );
   url.searchParams.set("id", `eq.${recordId}`);
   url.searchParams.set("storage_path", `eq.gdrive:${originalFileId}`);
   url.searchParams.set("limit", "1");
@@ -334,9 +373,11 @@ async function thumbnailUpload(request, env, origin) {
   if (!validUuid(recordId) || !validFileId(originalFileId)) return json({ error: "썸네일 대상이 올바르지 않습니다." }, 400, cors(origin));
   if (request.headers.get("content-type") !== "image/webp") return json({ error: "WebP 썸네일만 허용됩니다." }, 415, cors(origin));
   if (!Number.isFinite(size) || size <= 0 || size > THUMBNAIL_MAX_BYTES) return json({ error: "썸네일 크기가 올바르지 않습니다." }, 413, cors(origin));
-  if (!(await findPhoto(env, recordId, originalFileId))) return json({ error: "원본 사진을 찾지 못했습니다." }, 404, cors(origin));
-
   const photo = await findPhoto(env, recordId, originalFileId);
+  if (!photo) return json({ error: "원본 사진을 찾지 못했습니다." }, 404, cors(origin));
+  if (photo.thumbnail_storage_path) {
+    return json({ error: "이미 썸네일이 생성된 사진입니다." }, 409, cors(origin));
+  }
   let thumbnail;
   try {
     const uploaderFolderId = await ensureUploaderFolder(
@@ -487,6 +528,36 @@ function missingSettings(env) {
   ].filter((key) => !env[key]);
 }
 
+async function uploadRateLimit(request, env, origin) {
+  const clientIp = request.headers.get("cf-connecting-ip") || "unknown";
+  const folderKey = clean(request.headers.get("x-upload-folder-key"), 80);
+
+  if (env.UPLOAD_CLIENT_RATE_LIMITER) {
+    const clientKey = validFolderKey(folderKey) ? `${clientIp}:${folderKey}` : `${clientIp}:unknown`;
+    const { success } = await env.UPLOAD_CLIENT_RATE_LIMITER.limit({ key: clientKey });
+    if (!success) {
+      return json(
+        { error: "이 기기에서 업로드 요청이 잠시 많습니다. 1분 후 다시 시도해주세요." },
+        429,
+        cors(origin)
+      );
+    }
+  }
+
+  if (env.UPLOAD_RATE_LIMITER) {
+    const { success } = await env.UPLOAD_RATE_LIMITER.limit({ key: clientIp });
+    if (!success) {
+      return json(
+        { error: "현재 네트워크에서 업로드 요청이 많습니다. 1분 후 다시 시도해주세요." },
+        429,
+        cors(origin)
+      );
+    }
+  }
+
+  return null;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -504,8 +575,14 @@ export default {
     if (missing.length) return json({ error: "업로드 서버 설정이 완료되지 않았습니다.", missing }, 503, cors(origin));
 
     try {
-      if (url.pathname === "/upload" && request.method === "POST") return await originalUpload(request, env, origin);
-      if (url.pathname === "/thumbnail" && request.method === "POST") return await thumbnailUpload(request, env, origin);
+      if (url.pathname === "/upload" && request.method === "POST") {
+        const limited = await uploadRateLimit(request, env, origin);
+        return limited || await originalUpload(request, env, origin);
+      }
+      if (url.pathname === "/thumbnail" && request.method === "POST") {
+        const limited = await uploadRateLimit(request, env, origin);
+        return limited || await thumbnailUpload(request, env, origin);
+      }
       if (url.pathname === "/admin/storage-stats" && request.method === "GET") return await adminStorageStats(request, env, origin);
       return json({ error: "Not found" }, 404, cors(origin));
     } catch (error) {

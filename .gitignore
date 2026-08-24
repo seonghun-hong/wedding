@@ -7,6 +7,8 @@ cloudflare-worker/wrangler.toml
 cloudflare-worker/.dev.vars
 cloudflare-worker/.wrangler/
 cloudflare-worker/.wrangler-dry-run/
+cloudflare-worker/.npm-cache/
+cloudflare-worker/.wrangler-config/
 public/images/og_old.png
 public/images/gallery/old/
 public/images/gallery/tjsxor/

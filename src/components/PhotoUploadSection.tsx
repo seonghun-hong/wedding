@@ -20,9 +20,25 @@ const PHOTO_UPLOAD_API_URL = String(
   import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
 ).replace(/\/$/, "");
 const USE_GOOGLE_DRIVE_UPLOAD = Boolean(PHOTO_UPLOAD_API_URL);
-const MAX_FILE_COUNT = USE_GOOGLE_DRIVE_UPLOAD ? 30 : 100;
-const MAX_FILE_SIZE = (USE_GOOGLE_DRIVE_UPLOAD ? 30 : 50) * 1024 * 1024;
+const MAX_FILE_COUNT = 30;
+const MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024;
+const MAX_VIDEO_FILE_SIZE = 90 * 1024 * 1024;
 const SLIDE_DURATION = 260;
+const IMAGE_EXTENSIONS = ["avif", "heic", "heif", "jpeg", "jpg", "png", "webp"];
+const VIDEO_EXTENSIONS = ["mov", "mp4", "webm"];
+const IMAGE_MIME_TYPES = new Set([
+  "image/avif",
+  "image/heic",
+  "image/heif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+const VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+]);
 
 type UploadStatus = "waiting" | "uploading" | "success" | "error";
 type SlideTarget = "prev" | "next" | "center" | null;
@@ -103,6 +119,16 @@ type DriveStorageStats = {
   };
 };
 
+class UploadRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "UploadRequestError";
+    this.status = status;
+  }
+}
+
 function formatFileSize(size: number) {
   const mb = size / 1024 / 1024;
 
@@ -118,11 +144,13 @@ function getFileExtension(fileName: string) {
 }
 
 function getMediaType(file: File) {
-  if (file.type.startsWith("image/")) {
+  const extension = getFileExtension(file.name);
+
+  if (file.type.startsWith("image/") || IMAGE_EXTENSIONS.includes(extension)) {
     return "image";
   }
 
-  if (file.type.startsWith("video/")) {
+  if (file.type.startsWith("video/") || VIDEO_EXTENSIONS.includes(extension)) {
     return "video";
   }
 
@@ -130,18 +158,14 @@ function getMediaType(file: File) {
 }
 
 function isAllowedFile(file: File) {
-  if (USE_GOOGLE_DRIVE_UPLOAD) {
-    const extension = getFileExtension(file.name);
+  const extension = getFileExtension(file.name);
 
-    return (
-      file.type.startsWith("image/") ||
-      ["avif", "heic", "heif", "jpeg", "jpg", "png", "webp"].includes(
-        extension
-      )
-    );
-  }
-
-  return file.type.startsWith("image/") || file.type.startsWith("video/");
+  return (
+    IMAGE_MIME_TYPES.has(file.type.toLowerCase()) ||
+    VIDEO_MIME_TYPES.has(file.type.toLowerCase()) ||
+    IMAGE_EXTENSIONS.includes(extension) ||
+    VIDEO_EXTENSIONS.includes(extension)
+  );
 }
 
 function getUploadContentType(file: File) {
@@ -158,6 +182,9 @@ function getUploadContentType(file: File) {
     jpg: "image/jpeg",
     png: "image/png",
     webp: "image/webp",
+    mov: "video/quicktime",
+    mp4: "video/mp4",
+    webm: "video/webm",
   };
 
   return contentTypes[extension] || "application/octet-stream";
@@ -173,6 +200,10 @@ function getFileSignature(file: File) {
 }
 
 async function getUploadError(response: Response) {
+  if (response.status === 429) {
+    return "현재 사진 공유가 몰리고 있어요. 선택한 파일은 그대로 두었으니 잠시 후 다시 시도해주세요.";
+  }
+
   try {
     const data = (await response.json()) as { error?: string };
     return data.error || `업로드 실패 (${response.status})`;
@@ -433,7 +464,7 @@ export function PhotoUploadSection() {
 
       <button className="upload-entry-button" onClick={goUploadPage}>
         <Camera size={18} />
-        <span>사진 업로드하기</span>
+        <span>사진·동영상 올리기</span>
       </button>
     </section>
   );
@@ -591,18 +622,23 @@ export function PhotoUploadPage() {
     const allowedFiles = selectedFiles.filter(isAllowedFile);
 
     if (allowedFiles.length !== selectedFiles.length) {
-      showToast(
-        USE_GOOGLE_DRIVE_UPLOAD
-          ? "사진 파일만 업로드할 수 있습니다."
-          : "사진 또는 동영상 파일만 업로드할 수 있습니다."
-      );
+      showToast("지원되는 사진 또는 동영상 파일만 업로드할 수 있습니다.");
       return;
     }
 
-    const oversizedFile = allowedFiles.find((file) => file.size > MAX_FILE_SIZE);
+    const oversizedFile = allowedFiles.find((file) => {
+      const maxSize = getMediaType(file) === "video"
+        ? MAX_VIDEO_FILE_SIZE
+        : MAX_IMAGE_FILE_SIZE;
+      return file.size > maxSize;
+    });
 
     if (oversizedFile) {
-      showToast(`파일 크기는 개당 ${formatFileSize(MAX_FILE_SIZE)} 이하입니다.`);
+      const isVideo = getMediaType(oversizedFile) === "video";
+      const maxSize = isVideo ? MAX_VIDEO_FILE_SIZE : MAX_IMAGE_FILE_SIZE;
+      showToast(
+        `${isVideo ? "동영상" : "사진"}은 개당 ${formatFileSize(maxSize)} 이하입니다.`
+      );
       return;
     }
 
@@ -626,14 +662,14 @@ export function PhotoUploadPage() {
     });
 
     if (uniqueFiles.length === 0) {
-      showToast("이미 선택했거나 업로드한 사진입니다.");
+      showToast("이미 선택했거나 업로드한 파일입니다.");
       return;
     }
 
     const availableCount = Math.max(0, MAX_FILE_COUNT - files.length);
 
     if (availableCount === 0) {
-      showToast(`사진은 한 번에 최대 ${MAX_FILE_COUNT}장까지 선택할 수 있습니다.`);
+      showToast(`파일은 한 번에 최대 ${MAX_FILE_COUNT}개까지 선택할 수 있습니다.`);
       return;
     }
 
@@ -727,7 +763,7 @@ export function PhotoUploadPage() {
     const uploaderFolder = getUploaderFolderName(trimmedName, trimmedPhone);
 
     if (!USE_GOOGLE_DRIVE_UPLOAD) {
-      throw new Error("사진 업로드 서버가 설정되지 않았습니다.");
+      throw new Error("파일 업로드 서버가 설정되지 않았습니다.");
     }
 
     const response = await fetch(`${PHOTO_UPLOAD_API_URL}/upload`, {
@@ -747,7 +783,7 @@ export function PhotoUploadPage() {
     });
 
     if (!response.ok) {
-      throw new Error(await getUploadError(response));
+      throw new UploadRequestError(await getUploadError(response), response.status);
     }
 
     const uploaded = (await response.json()) as {
@@ -757,26 +793,34 @@ export function PhotoUploadPage() {
 
       onOriginalUploaded?.();
 
-      try {
-        const thumbnailBlob = await createImageThumbnail(item.file);
-        const thumbnailParams = new URLSearchParams({
-          recordId: uploaded.id,
-          originalFileId: uploaded.fileId,
-        });
-        const thumbnailResponse = await fetch(
-          `${PHOTO_UPLOAD_API_URL}/thumbnail?${thumbnailParams}`,
-          {
-            method: "POST",
-            headers: { "content-type": "image/webp" },
-            body: thumbnailBlob,
-          }
-        );
+      if (getMediaType(item.file) === "image") {
+        try {
+          const thumbnailBlob = await createImageThumbnail(item.file);
+          const thumbnailParams = new URLSearchParams({
+            recordId: uploaded.id,
+            originalFileId: uploaded.fileId,
+          });
+          const thumbnailResponse = await fetch(
+            `${PHOTO_UPLOAD_API_URL}/thumbnail?${thumbnailParams}`,
+            {
+              method: "POST",
+              headers: {
+                "content-type": "image/webp",
+                "x-upload-folder-key": uploaderFolder,
+              },
+              body: thumbnailBlob,
+            }
+          );
 
-        if (!thumbnailResponse.ok) {
-          console.warn("썸네일 업로드 실패:", await getUploadError(thumbnailResponse));
+          if (!thumbnailResponse.ok) {
+            console.warn(
+              "썸네일 업로드 실패:",
+              await getUploadError(thumbnailResponse)
+            );
+          }
+        } catch (error) {
+          console.warn("썸네일 생성 실패, 원본 업로드는 유지합니다:", error);
         }
-      } catch (error) {
-        console.warn("썸네일 생성 실패, 원본 업로드는 유지합니다:", error);
       }
 
     return;
@@ -798,11 +842,7 @@ export function PhotoUploadPage() {
     }
 
     if (files.length === 0) {
-      showToast(
-        USE_GOOGLE_DRIVE_UPLOAD
-          ? "업로드할 사진을 선택해주세요."
-          : "업로드할 사진 또는 동영상을 선택해주세요."
-      );
+      showToast("업로드할 사진 또는 동영상을 선택해주세요.");
       return;
     }
 
@@ -811,7 +851,7 @@ export function PhotoUploadPage() {
     );
 
     if (queuedFiles.length === 0) {
-      showToast("다시 업로드할 사진이 없습니다.");
+      showToast("다시 업로드할 파일이 없습니다.");
       return;
     }
 
@@ -847,6 +887,7 @@ export function PhotoUploadPage() {
     let successCount = 0;
     let failCount = 0;
     let interrupted = false;
+    let rateLimited = false;
 
     for (const [index, item] of queuedFiles.entries()) {
       if (!navigator.onLine) {
@@ -898,6 +939,7 @@ export function PhotoUploadPage() {
         console.error("파일 업로드 실패:", error);
 
         const isNetworkError = error instanceof TypeError || !navigator.onLine;
+        const isRateLimited = error instanceof UploadRequestError && error.status === 429;
         const errorMessage = isNetworkError
           ? "네트워크 연결을 확인해주세요."
           : error instanceof Error
@@ -906,6 +948,7 @@ export function PhotoUploadPage() {
 
         failCount += 1;
         interrupted = isNetworkError;
+        rateLimited = isRateLimited;
         setStagedUploadProgress(
           Math.round(((index + 1) / queuedFiles.length) * 100)
         );
@@ -923,17 +966,23 @@ export function PhotoUploadPage() {
           )
         );
 
-        showToast(errorMessage);
+        if (!interrupted && !rateLimited) {
+          showToast(errorMessage);
+        }
 
-        if (interrupted) {
+        if (interrupted || rateLimited) {
           break;
         }
       }
     }
 
-    if (interrupted) {
+    if (interrupted || rateLimited) {
       setUploading(false);
-      showToast("연결이 끊겼습니다. 연결 후 남은 사진을 다시 시도해주세요.");
+      showToast(
+        rateLimited
+          ? "현재 사진 공유가 몰리고 있어요. 선택한 파일은 그대로 두었으니 잠시 후 다시 시도해주세요."
+          : "연결이 끊겼습니다. 연결 후 남은 파일을 다시 시도해주세요."
+      );
       return;
     }
 
@@ -1031,7 +1080,7 @@ export function PhotoUploadPage() {
         />
         <p className="upload-form-help">
           <Search size={14} />
-          <span>연락처를 입력하면 내가 공유한 사진을 다시 확인할 수 있어요.</span>
+          <span>연락처를 입력하면 내가 공유한 사진과 영상을 다시 확인할 수 있어요.</span>
         </p>
       </div>
 
@@ -1049,7 +1098,7 @@ export function PhotoUploadPage() {
       </div>
 
       <div className="upload-form-group">
-        <label>사진 선택</label>
+          <label>사진·동영상 선택</label>
 
         <div
           className={`upload-dropzone ${isDragging ? "dragging" : ""}`}
@@ -1089,9 +1138,7 @@ export function PhotoUploadPage() {
         >
           <Plus size={40} strokeWidth={1.4} />
           <p>
-            {USE_GOOGLE_DRIVE_UPLOAD
-              ? "원본 사진을 선택하거나 드래그해서 올려주세요"
-              : "사진 또는 동영상을 선택하거나 드래그해서 올려주세요"}
+            사진 또는 동영상을 선택하거나 드래그해서 올려주세요
           </p>
         </div>
 
@@ -1100,15 +1147,15 @@ export function PhotoUploadPage() {
           type="file"
           multiple
           hidden
-          accept={USE_GOOGLE_DRIVE_UPLOAD ? "image/*" : "image/*,video/*"}
+          accept="image/*,video/mp4,video/quicktime,video/webm,.mov"
           onChange={handleInputFiles}
           disabled={uploading}
         />
 
         <div className="upload-limit-guide">
           <p>• 한 번에 최대 {MAX_FILE_COUNT}개까지 업로드하실 수 있습니다</p>
-          <p>• 업로드 가능한 파일 크기는 개당 {formatFileSize(MAX_FILE_SIZE)} 이하입니다</p>
-          {USE_GOOGLE_DRIVE_UPLOAD && <p>• 사진은 화질 저하 없이 원본으로 보관됩니다</p>}
+          <p>• 사진은 개당 {formatFileSize(MAX_IMAGE_FILE_SIZE)}, 동영상은 {formatFileSize(MAX_VIDEO_FILE_SIZE)} 이하입니다</p>
+          {USE_GOOGLE_DRIVE_UPLOAD && <p>• 사진과 동영상은 화질 저하 없이 원본으로 보관됩니다</p>}
         </div>
       </div>
 
@@ -1184,8 +1231,8 @@ export function PhotoUploadPage() {
         {uploading
           ? "업로드 중..."
           : failedFileCount > 0
-            ? `실패한 사진 ${failedFileCount}장 다시 시도`
-            : "사진 업로드하기"}
+            ? `실패한 파일 ${failedFileCount}개 다시 시도`
+            : "사진·동영상 업로드하기"}
       </button>
 
       <button
@@ -1195,7 +1242,7 @@ export function PhotoUploadPage() {
         disabled={uploading}
       >
         <Search size={18} />
-        <span>내가 공유한 사진 보러가기</span>
+        <span>내가 공유한 사진·영상 보러가기</span>
       </button>
 
       {toast && <div className="toast">{toast}</div>}
@@ -1212,7 +1259,7 @@ export function PhotoUploadPage() {
             </div>
 
             <h3>
-              💕 사진을 소중히
+              💕 소중한 순간을
               <br />
               전달하고 있어요
             </h3>
@@ -1255,7 +1302,7 @@ export function PhotoUploadPage() {
             <h3>업로드가 완료되었습니다</h3>
 
             <p>
-              소중한 사진 {uploadComplete.count}개를
+              소중한 파일 {uploadComplete.count}개를
               <br />
               공유해주셔서 감사합니다.
             </p>
@@ -1278,7 +1325,7 @@ export function PhotoUploadPage() {
                   window.location.hash = "my-photos";
                 }}
               >
-                내가 공유한 사진 보기
+                내가 공유한 사진·영상 보기
               </button>
 
               <button
@@ -1767,18 +1814,18 @@ export function MyPhotosPage() {
     <section className="section my-photos-page-section">
       <button className="upload-back-button" onClick={goBackUpload}>
         <ChevronLeft size={18} />
-        <span>사진 업로드로 돌아가기</span>
+        <span>파일 업로드로 돌아가기</span>
       </button>
 
       <div className="upload-page-heading">
         <p className="upload-page-script">My Photos</p>
-        <h2 className="upload-page-title">내가 공유한 사진</h2>
+        <h2 className="upload-page-title">내가 공유한 사진·영상</h2>
       </div>
 
       <p className="upload-page-main-text">
         업로드할 때 입력한 연락처와 이름으로
         <br />
-        내가 공유한 사진을 다시 확인할 수 있습니다.
+        내가 공유한 사진과 영상을 다시 확인할 수 있습니다.
         <br />
         비밀번호를 설정하지 않았다면 연락처 뒷자리 4자리를 입력해주세요.
       </p>

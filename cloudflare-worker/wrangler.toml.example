@@ -5,8 +5,25 @@ compatibility_date = "2026-07-01"
 [vars]
 # Origin only. Do not include the /wedding path.
 ALLOWED_ORIGINS = "https://seonghun-hong.github.io,http://localhost:5173,http://127.0.0.1:5173"
-MAX_FILE_BYTES = "31457280"
+MAX_IMAGE_FILE_BYTES = "31457280"
+MAX_VIDEO_FILE_BYTES = "94371840"
 MAX_STORAGE_BYTES = "13958643712"
+
+[[ratelimits]]
+name = "UPLOAD_RATE_LIMITER"
+namespace_id = "2026092001"
+
+  [ratelimits.simple]
+  limit = 600
+  period = 60
+
+[[ratelimits]]
+name = "UPLOAD_CLIENT_RATE_LIMITER"
+namespace_id = "2026092002"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
 
 # Add these with `wrangler secret put`, never in this file:
 # GOOGLE_CLIENT_ID
