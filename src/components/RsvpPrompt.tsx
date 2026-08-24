@@ -7,7 +7,6 @@ type AttendanceStatus = "attending" | "declined";
 type GuestSide = "groom" | "bride" | "";
 type MealOption = "yes" | "no" | "undecided";
 type ShuttleOption = "yes" | "no";
-type BoardingPlace = "daejeon" | "sejong" | "";
 
 const RSVP_STORAGE_KEY = "wedding_rsvp_response";
 const RSVP_DISMISS_KEY = "wedding_rsvp_dismissed_in_session";
@@ -39,24 +38,6 @@ function getStoredResponse(): RsvpResponse | null {
   } catch {
     return null;
   }
-}
-
-function getBoardingPlaceValue(place: string | null): BoardingPlace {
-  if (place === "대전") return "daejeon";
-  if (place === "세종") return "sejong";
-  return "";
-}
-
-function getBoardingPlaceLabel(place: BoardingPlace) {
-  if (place === "daejeon") {
-    return "대전";
-  }
-
-  if (place === "sejong") {
-    return "세종";
-  }
-
-  return "";
 }
 
 function getSideLabel(side: GuestSide | null) {
@@ -91,7 +72,6 @@ export function RsvpPrompt() {
   const [guestCount, setGuestCount] = useState(1);
   const [meal, setMeal] = useState<MealOption>("undecided");
   const [shuttle, setShuttle] = useState<ShuttleOption>("no");
-  const [boardingPlace, setBoardingPlace] = useState<BoardingPlace>("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [complete, setComplete] = useState(false);
@@ -106,7 +86,6 @@ export function RsvpPrompt() {
     setGuestCount(Math.max(1, response.guest_count || 1));
     setMeal(response.meal || "undecided");
     setShuttle(response.shuttle_bus || "no");
-    setBoardingPlace(getBoardingPlaceValue(response.boarding_place));
     setSubmittedResponse(response);
   };
 
@@ -167,7 +146,6 @@ export function RsvpPrompt() {
 
     if (nextStatus === "declined") {
       setShuttle("no");
-      setBoardingPlace("");
       setMeal("no");
     }
   };
@@ -179,7 +157,7 @@ export function RsvpPrompt() {
 
     const boardingPlaceText =
       status === "attending" && shuttle === "yes"
-        ? getBoardingPlaceLabel(boardingPlace)
+        ? "세종"
         : "";
 
     const previousResponse = getStoredResponse();
@@ -226,11 +204,7 @@ export function RsvpPrompt() {
     setComplete(true);
   };
 
-  const needsBoardingPlace =
-    status === "attending" && shuttle === "yes" && !boardingPlace;
-
-  const submitDisabled =
-    !status || !name.trim() || needsBoardingPlace || saving;
+  const submitDisabled = !status || !name.trim() || saving;
 
   if (!open) {
     return null;
@@ -419,37 +393,12 @@ export function RsvpPrompt() {
                         <button
                           className={shuttle === "no" ? "active" : ""}
                           type="button"
-                          onClick={() => {
-                            setShuttle("no");
-                            setBoardingPlace("");
-                          }}
+                          onClick={() => setShuttle("no")}
                         >
                           이용 안 해요
                         </button>
                       </div>
                     </div>
-
-                    {shuttle === "yes" && (
-                      <div className="rsvp-meal-group">
-                        <span>탑승 장소</span>
-                        <div className="rsvp-segmented boarding-place">
-                          <button
-                            className={boardingPlace === "daejeon" ? "active" : ""}
-                            type="button"
-                            onClick={() => setBoardingPlace("daejeon")}
-                          >
-                            대전
-                          </button>
-                          <button
-                            className={boardingPlace === "sejong" ? "active" : ""}
-                            type="button"
-                            onClick={() => setBoardingPlace("sejong")}
-                          >
-                            세종
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>

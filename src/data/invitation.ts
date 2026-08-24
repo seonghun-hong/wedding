@@ -43,7 +43,7 @@ export const invitation = {
   },
 
   rsvp: {
-    deadline: "2026년 9월 20일 일요일까지",
+    deadline: "2026년 9월 13일 일요일까지",
   },
 
   intro: [

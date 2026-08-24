@@ -5629,10 +5629,6 @@ img {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.rsvp-segmented.boarding-place {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .rsvp-actions {
   display: grid;
   grid-template-columns: 1fr;

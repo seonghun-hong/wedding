@@ -19,9 +19,7 @@ type RsvpFilter =
   | "attending"
   | "declined"
   | "meal"
-  | "shuttle"
-  | "daejeon"
-  | "sejong";
+  | "shuttle";
 
 async function createPasswordHash(password: string) {
   const encoder = new TextEncoder();
@@ -145,7 +143,6 @@ export function AdminRsvpPage() {
       "참석 인원",
       "식사",
       "대절버스",
-      "탑승 장소",
       "중복 가능",
       "응답 시간",
     ];
@@ -158,7 +155,6 @@ export function AdminRsvpPage() {
         attending ? item.guest_count || 0 : 0,
         attending ? getMealLabel(item.meal) : "-",
         attending && item.shuttle_bus === "yes" ? "이용" : "이용 안 함",
-        attending && item.shuttle_bus === "yes" ? item.boarding_place || "" : "",
         duplicateKeys.has(getDuplicateKey(item)) ? "확인 필요" : "",
         formatCreatedAt(item.created_at),
       ];
@@ -171,8 +167,6 @@ export function AdminRsvpPage() {
       ["불참 응답", stats.declinedCount],
       ["식사 인원", stats.mealYes],
       ["대절버스 탑승 인원", stats.shuttleCount],
-      ["대전 탑승 인원", stats.daejeonCount],
-      ["세종 탑승 인원", stats.sejongCount],
       ["중복 가능 응답", duplicateResponseCount],
     ];
     const csv = [...summaryRows, [], ["하객별 상세 답변"], headers, ...rows]
@@ -217,12 +211,6 @@ export function AdminRsvpPage() {
         (sum, item) => sum + Number(item.guest_count || 0),
         0
       ),
-      daejeonCount: shuttleUsers
-        .filter((item) => item.boarding_place === "대전")
-        .reduce((sum, item) => sum + Number(item.guest_count || 0), 0),
-      sejongCount: shuttleUsers
-        .filter((item) => item.boarding_place === "세종")
-        .reduce((sum, item) => sum + Number(item.guest_count || 0), 0),
     };
   }, [items]);
 
@@ -258,8 +246,6 @@ export function AdminRsvpPage() {
       if (filter === "declined") return item.attendance_status === "declined";
       if (filter === "meal") return item.attendance_status === "attending" && item.meal === "yes";
       if (filter === "shuttle") return item.attendance_status === "attending" && item.shuttle_bus === "yes";
-      if (filter === "daejeon") return item.shuttle_bus === "yes" && item.boarding_place === "대전";
-      if (filter === "sejong") return item.shuttle_bus === "yes" && item.boarding_place === "세종";
       return true;
     });
   }, [filter, items, searchQuery]);
@@ -325,14 +311,6 @@ export function AdminRsvpPage() {
               <strong>{stats.shuttleCount}</strong>
             </div>
             <div className="admin-stat-card">
-              <span>대전 탑승</span>
-              <strong>{stats.daejeonCount}</strong>
-            </div>
-            <div className="admin-stat-card">
-              <span>세종 탑승</span>
-              <strong>{stats.sejongCount}</strong>
-            </div>
-            <div className="admin-stat-card">
               <span>참석 응답</span>
               <strong>{stats.attendingCount}</strong>
             </div>
@@ -367,8 +345,6 @@ export function AdminRsvpPage() {
               <option value="declined">불참</option>
               <option value="meal">식사</option>
               <option value="shuttle">대절버스</option>
-              <option value="daejeon">대전 탑승</option>
-              <option value="sejong">세종 탑승</option>
             </select>
           </div>
 
