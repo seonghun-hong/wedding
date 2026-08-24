@@ -24,6 +24,7 @@ const MAX_FILE_COUNT = 30;
 const MAX_IMAGE_FILE_SIZE = 30 * 1024 * 1024;
 const MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024;
 const SLIDE_DURATION = 260;
+const VIEWER_PREFETCH_DISTANCE = 2;
 const IMAGE_EXTENSIONS = ["avif", "heic", "heif", "jpeg", "jpg", "png", "webp"];
 const VIDEO_EXTENSIONS = ["mov", "mp4", "webm"];
 const IMAGE_MIME_TYPES = new Set([
@@ -1333,6 +1334,7 @@ export function MyPhotosPage() {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
   const [toast, setToast] = useState("");
 
   const selectedIndexRef = useRef<number | null>(null);
@@ -1343,6 +1345,10 @@ export function MyPhotosPage() {
   const animatingRef = useRef(false);
   const pendingTargetRef = useRef<SlideTarget>(null);
   const animationTimerRef = useRef<number | null>(null);
+  const hasDraggedRef = useRef(false);
+  const preparingSlideRef = useRef(false);
+  const slideRequestIdRef = useRef(0);
+  const preloadedPreviewSetRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const savedLookup = localStorage.getItem("wedding_last_upload_lookup");
@@ -1394,6 +1400,64 @@ export function MyPhotosPage() {
     return index === myUploads.length - 1 ? 0 : index + 1;
   };
 
+  const preloadUploadPreview = (index: number) => {
+    const item = myUploads[index];
+
+    if (!item || item.media_type === "video") {
+      return Promise.resolve();
+    }
+
+    const src = item.thumbnail_url || item.photo_url;
+
+    if (preloadedPreviewSetRef.current.has(src)) {
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      const image = new Image();
+
+      const finish = async () => {
+        try {
+          if (typeof image.decode === "function") {
+            await image.decode();
+          }
+        } catch {
+          // 일부 모바일 브라우저의 decode 실패는 로드 완료로 처리합니다.
+        }
+
+        preloadedPreviewSetRef.current.add(src);
+        resolve();
+      };
+
+      image.onload = () => {
+        void finish();
+      };
+      image.onerror = () => resolve();
+      image.src = src;
+
+      if (image.complete) {
+        void finish();
+      }
+    });
+  };
+
+  const preloadAroundIndex = (index: number) => {
+    const indexes = new Set<number>([index]);
+    let prev = index;
+    let next = index;
+
+    for (let step = 0; step < VIEWER_PREFETCH_DISTANCE; step += 1) {
+      prev = getPrevIndex(prev);
+      next = getNextIndex(next);
+      indexes.add(prev);
+      indexes.add(next);
+    }
+
+    indexes.forEach((previewIndex) => {
+      void preloadUploadPreview(previewIndex);
+    });
+  };
+
   const clearAnimationTimer = () => {
     if (animationTimerRef.current !== null) {
       window.clearTimeout(animationTimerRef.current);
@@ -1408,8 +1472,15 @@ export function MyPhotosPage() {
     latestOffsetRef.current = 0;
   };
 
+  const resetDraggedState = () => {
+    hasDraggedRef.current = false;
+    setHasDragged(false);
+  };
+
   const resetAnimation = () => {
     clearAnimationTimer();
+    slideRequestIdRef.current += 1;
+    preparingSlideRef.current = false;
     animatingRef.current = false;
     pendingTargetRef.current = null;
     setIsAnimating(false);
@@ -1418,17 +1489,22 @@ export function MyPhotosPage() {
   };
 
   const openViewer = (index: number) => {
+    slideRequestIdRef.current += 1;
     selectedIndexRef.current = index;
     setSelectedIndex(index);
+    preloadAroundIndex(index);
     resetPointer();
     resetAnimation();
+    resetDraggedState();
   };
 
   const closeViewer = () => {
+    slideRequestIdRef.current += 1;
     selectedIndexRef.current = null;
     setSelectedIndex(null);
     resetPointer();
     resetAnimation();
+    resetDraggedState();
   };
 
   const completeSlide = () => {
@@ -1460,17 +1536,45 @@ export function MyPhotosPage() {
     setIsAnimating(false);
     setSelectedIndex(nextSelectedIndex);
     setDragOffset(0);
+
+    window.setTimeout(() => {
+      resetDraggedState();
+    }, 0);
   };
 
-  const finishSlide = (target: Exclude<SlideTarget, null>) => {
+  const finishSlide = async (target: Exclude<SlideTarget, null>) => {
     const currentIndex = selectedIndexRef.current;
 
-    if (currentIndex === null || animatingRef.current) {
+    if (
+      currentIndex === null ||
+      animatingRef.current ||
+      preparingSlideRef.current
+    ) {
       return;
     }
 
     if (target !== "center" && myUploads.length <= 1) {
       return;
+    }
+
+    const requestId = slideRequestIdRef.current + 1;
+    slideRequestIdRef.current = requestId;
+
+    if (target !== "center") {
+      const targetIndex = target === "next"
+        ? getNextIndex(currentIndex)
+        : getPrevIndex(currentIndex);
+
+      preparingSlideRef.current = true;
+      await preloadUploadPreview(targetIndex);
+      preparingSlideRef.current = false;
+
+      if (
+        slideRequestIdRef.current !== requestId ||
+        selectedIndexRef.current !== currentIndex
+      ) {
+        return;
+      }
     }
 
     const width = window.innerWidth;
@@ -1526,6 +1630,8 @@ export function MyPhotosPage() {
     startXRef.current = event.clientX;
     startYRef.current = event.clientY;
     latestOffsetRef.current = 0;
+    hasDraggedRef.current = false;
+    setHasDragged(false);
 
     try {
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -1550,10 +1656,11 @@ export function MyPhotosPage() {
     const absX = Math.abs(diffX);
     const absY = Math.abs(diffY);
 
-    if (absY > absX && absY > 8) {
+    if (absY > absX && absY > 12) {
       resetPointer();
       setDragOffset(0);
       latestOffsetRef.current = 0;
+      resetDraggedState();
 
       try {
         event.currentTarget.releasePointerCapture(event.pointerId);
@@ -1570,6 +1677,8 @@ export function MyPhotosPage() {
 
     event.preventDefault();
 
+    hasDraggedRef.current = true;
+    setHasDragged(true);
     setDragOffset(diffX);
     latestOffsetRef.current = diffX;
   };
@@ -1604,6 +1713,10 @@ export function MyPhotosPage() {
 
     if (Math.abs(offset) < 8) {
       resetAnimation();
+
+      window.setTimeout(() => {
+        resetDraggedState();
+      }, 0);
       return;
     }
 
@@ -1624,6 +1737,10 @@ export function MyPhotosPage() {
     }
 
     resetAnimation();
+
+    window.setTimeout(() => {
+      resetDraggedState();
+    }, 0);
   };
 
   const loadMyUploads = async () => {
@@ -1705,6 +1822,8 @@ export function MyPhotosPage() {
       return;
     }
 
+    preloadAroundIndex(selectedIndex);
+
     const clearPointerState = () => {
       if (pointerIdRef.current === null) {
         return;
@@ -1712,6 +1831,7 @@ export function MyPhotosPage() {
 
       resetPointer();
       resetAnimation();
+      resetDraggedState();
     };
 
     window.addEventListener("pointerup", clearPointerState);
@@ -1882,7 +2002,18 @@ export function MyPhotosPage() {
       {selectedIndex !== null && prevIndex !== null && nextIndex !== null && (
         <div
           className="image-modal photo-viewer-modal"
-          onClick={closeViewer}
+          onClick={(event) => {
+            if (hasDragged || hasDraggedRef.current) {
+              event.stopPropagation();
+              return;
+            }
+
+            closeViewer();
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerCancel}
           role="presentation"
         >
           <button
@@ -1895,6 +2026,7 @@ export function MyPhotosPage() {
               event.stopPropagation();
               closeViewer();
             }}
+            aria-label="사진 닫기"
           >
             ×
           </button>
@@ -1919,11 +2051,6 @@ export function MyPhotosPage() {
           <div
             className="photo-viewer-window"
             onClick={(event) => event.stopPropagation()}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerCancel}
-            onPointerLeave={handlePointerCancel}
           >
             <div
               className="photo-viewer-track"
