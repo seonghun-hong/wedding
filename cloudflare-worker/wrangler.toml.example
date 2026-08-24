@@ -22,7 +22,7 @@ name = "UPLOAD_CLIENT_RATE_LIMITER"
 namespace_id = "2026092002"
 
   [ratelimits.simple]
-  limit = 120
+  limit = 180
   period = 60
 
 # Add these with `wrangler secret put`, never in this file:
