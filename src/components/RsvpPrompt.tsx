@@ -381,7 +381,7 @@ export function RsvpPrompt() {
                     </div>
 
                     <div className="rsvp-meal-group">
-                      <span>대절버스 탑승 여부</span>
+                      <span>대절버스 탑승 여부 (세종시)</span>
                       <div className="rsvp-segmented">
                         <button
                           className={shuttle === "yes" ? "active" : ""}
