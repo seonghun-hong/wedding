@@ -5651,19 +5651,6 @@ img {
   border: 1px solid #efccd5;
 }
 
-.footer-btn.rsvp-share.post-wedding-share {
-  width: min(112px, 28vw);
-  background: #c96880;
-  color: #ffffff;
-  border-color: #c96880;
-  box-shadow: 0 8px 20px rgba(180, 88, 111, 0.3);
-  font-weight: 800;
-}
-
-.footer-btn.rsvp-share.post-wedding-share:active {
-  background: #b85a72;
-}
-
 .footer-btn {
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
@@ -5713,6 +5700,52 @@ img {
   text-align: center;
   box-shadow: 0 18px 42px rgba(98, 55, 65, 0.18);
   animation: rsvpSheetIn 0.24s ease-out both;
+}
+
+.photo-share-prompt-sheet {
+  text-align: center;
+}
+
+.photo-share-prompt-icon {
+  width: 62px;
+  height: 62px;
+  margin: 8px auto 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff0f4;
+  color: #c96880;
+}
+
+.photo-share-prompt-actions {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.photo-share-prompt-actions button {
+  min-height: 48px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.photo-share-prompt-actions .later {
+  border: 1px solid #eadfe2;
+  background: #ffffff;
+  color: #796b70;
+}
+
+.photo-share-prompt-actions .submit {
+  border: 1px solid #c96880;
+  background: #c96880;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
 }
 
 .rsvp-prompt-sheet::before {

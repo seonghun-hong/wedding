@@ -1,31 +1,51 @@
 import { useEffect, useState } from "react";
 import { invitation } from "../data/invitation";
 
-export function isPostWedding() {
-  const weddingTime = new Date(invitation.wedding.date).getTime();
+type WeddingPhase = {
+  weddingDayStarted: boolean;
+  ceremonyStarted: boolean;
+};
 
-  if (Number.isNaN(weddingTime)) {
-    return false;
-  }
+function getWeddingTimes() {
+  const ceremonyTime = new Date(invitation.wedding.date).getTime();
+  const weddingDate = invitation.wedding.date.slice(0, 10);
+  const timezone = invitation.wedding.date.match(/(Z|[+-]\d{2}:\d{2})$/)?.[1] || "+09:00";
+  const weddingDayTime = new Date(`${weddingDate}T00:00:00${timezone}`).getTime();
 
-  return Date.now() >= weddingTime;
+  return { weddingDayTime, ceremonyTime };
 }
 
-export function usePostWeddingPhase() {
-  const [postWedding, setPostWedding] = useState(isPostWedding);
+function getWeddingPhase(): WeddingPhase {
+  const { weddingDayTime, ceremonyTime } = getWeddingTimes();
+  const now = Date.now();
+
+  return {
+    weddingDayStarted: !Number.isNaN(weddingDayTime) && now >= weddingDayTime,
+    ceremonyStarted: !Number.isNaN(ceremonyTime) && now >= ceremonyTime,
+  };
+}
+
+export function useWeddingPhase() {
+  const [phase, setPhase] = useState<WeddingPhase>(getWeddingPhase);
 
   useEffect(() => {
     let timerId: number | undefined;
 
     const updatePhase = () => {
-      const weddingTime = new Date(invitation.wedding.date).getTime();
-      const nextPostWedding = isPostWedding();
+      const nextPhase = getWeddingPhase();
+      const { weddingDayTime, ceremonyTime } = getWeddingTimes();
 
-      setPostWedding(nextPostWedding);
+      setPhase(nextPhase);
 
-      if (!nextPostWedding && !Number.isNaN(weddingTime)) {
+      const nextTransition = !nextPhase.weddingDayStarted
+        ? weddingDayTime
+        : !nextPhase.ceremonyStarted
+          ? ceremonyTime
+          : null;
+
+      if (nextTransition !== null && !Number.isNaN(nextTransition)) {
         const maxTimerDelay = 2_147_000_000;
-        const remaining = Math.max(weddingTime - Date.now(), 0);
+        const remaining = Math.max(nextTransition - Date.now(), 0);
         timerId = window.setTimeout(
           updatePhase,
           Math.min(remaining + 100, maxTimerDelay)
@@ -40,5 +60,5 @@ export function usePostWeddingPhase() {
     };
   }, []);
 
-  return postWedding;
+  return phase;
 }

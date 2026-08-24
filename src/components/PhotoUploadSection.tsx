@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase, hasSupabaseConfig } from "../lib/supabase";
-import { usePostWeddingPhase } from "../lib/weddingPhase";
+import { useWeddingPhase } from "../lib/weddingPhase";
 
 const PHOTO_UPLOAD_API_URL = String(
   import.meta.env.VITE_PHOTO_UPLOAD_API_URL || ""
@@ -527,18 +527,18 @@ function formatCreatedAt(value: string) {
 }
 
 export function PhotoUploadSection() {
-  const postWedding = usePostWeddingPhase();
+  const { ceremonyStarted } = useWeddingPhase();
 
   const goUploadPage = () => {
     window.location.hash = "upload";
   };
 
   return (
-    <section className={`section upload-entry-section${postWedding ? " post-wedding" : ""}`}>
+    <section className={`section upload-entry-section${ceremonyStarted ? " post-wedding" : ""}`}>
       <div className="upload-entry-heading">
-        <p className="upload-entry-script">{postWedding ? "Wedding Album" : "Photo Share"}</p>
+        <p className="upload-entry-script">{ceremonyStarted ? "Wedding Album" : "Photo Share"}</p>
         <h2 className="upload-entry-title">
-          {postWedding ? "오늘의 순간 공유" : "소중한 순간 공유"}
+          {ceremonyStarted ? "오늘의 순간 공유" : "소중한 순간 공유"}
         </h2>
       </div>
 
@@ -549,7 +549,7 @@ export function PhotoUploadSection() {
       </div>
 
       <p className="upload-entry-desc">
-        {postWedding ? "함께한 오늘의 사진과 동영상을" : "결혼식 현장에서 찍은 사진들을"}
+        {ceremonyStarted ? "함께한 오늘의 사진과 동영상을" : "결혼식 현장에서 찍은 사진들을"}
         <br />
         신랑신부와 함께 나눠보세요
       </p>
