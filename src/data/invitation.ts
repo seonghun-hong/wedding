@@ -92,7 +92,7 @@ export const invitation = {
         {
           id: "sejong",
           label: "세종",
-          time: "오전 8:10",
+          time: "오전 8:20",
           place: "양우내안애 아스펜 견본주택 앞",
           address: "세종특별자치시 대평동 270-10",
           mapUrl: "https://naver.me/5mIHXqay",
