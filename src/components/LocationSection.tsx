@@ -294,7 +294,7 @@ export function LocationSection() {
             <div className="bus-route">
               <div className="bus-route-heading">
                 <span>귀가행</span>
-                <time>오후 1:00 출발</time>
+                <time>오후 1:30 출발</time>
               </div>
               <strong>서울 예식장 → 세종</strong>
             </div>
