@@ -26,7 +26,7 @@ export const invitation = {
     father: "안복균",
     mother: "이복순",
     accounts: [
-      { name: "안지연", bank: "토스뱅크", account: "1000-2724-7445", holder: "안지연" },
+      { name: "안지연", bank: "국민은행", account: "169002-04-048985", holder: "안지연" },
       { name: "이복순", bank: "우리은행", account: "1002-833-347320", holder: "이복순" },
     ] as BankAccount[],
   },
