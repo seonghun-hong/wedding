@@ -86,7 +86,7 @@ export const invitation = {
     bus: ["이천역에서 탑승", "3번, 12번, 12-1번 탑승", "이천터미널에서 탑승", "22-3번, 22-9번 탑승"],
     parking: ["웨딩홀 지하 주차장 이용 가능", "2시간 무료 주차 제공"],
     shuttle: {
-      temporary: true,
+      temporary: false,
       contact: "문의 연락처: 김태진 기사님 · 010-5453-4737",
       stops: [
         {
