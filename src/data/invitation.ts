@@ -87,7 +87,7 @@ export const invitation = {
     parking: ["웨딩홀 지하 주차장 이용 가능", "2시간 무료 주차 제공"],
     shuttle: {
       temporary: true,
-      contact: "문의 연락처 추후 안내",
+      contact: "문의 연락처: 김태진 기사님 · 010-5453-4737",
       stops: [
         {
           id: "sejong",
