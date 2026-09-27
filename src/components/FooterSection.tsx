@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { CalendarDays, ClipboardCheck, Copy, Share2 } from "lucide-react";
+import { CalendarDays, Copy, Share2 } from "lucide-react";
 import { invitation } from "../data/invitation";
-import { useWeddingPhase } from "../lib/weddingPhase";
 import { downloadCalendar } from "../lib/calendar";
 import { copyText } from "../lib/clipboard";
 
@@ -17,7 +16,6 @@ const KAKAO_IMAGE_URL =
 
 export function FooterSection() {
   const [toast, setToast] = useState("");
-  const { weddingDayStarted } = useWeddingPhase();
 
   const showToast = (message: string) => {
     setToast(message);
@@ -74,9 +72,6 @@ export function FooterSection() {
     showToast("일정 파일을 열어 캘린더에 추가해주세요.");
   };
 
-  const openRsvp = () => {
-    window.dispatchEvent(new Event("wedding:open-rsvp"));
-  };
 
   return (
     <footer className="footer-section">
@@ -108,16 +103,6 @@ export function FooterSection() {
     <span>캘린더</span>
   </button>
 
-  {!weddingDayStarted && (
-    <button
-      className="footer-btn rsvp-share"
-      type="button"
-      onClick={openRsvp}
-    >
-      <ClipboardCheck size={28} />
-      <span>참석여부</span>
-    </button>
-  )}
 </div>
 
       {toast && <div className="toast">{toast}</div>}

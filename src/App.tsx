@@ -16,13 +16,12 @@ import {
   AdminPhotosPage,
 } from "./components/PhotoUploadSection";
 import { FooterSection } from "./components/FooterSection";
-import { RsvpPrompt } from "./components/RsvpPrompt";
 import { PhotoSharePrompt } from "./components/PhotoSharePrompt";
 import { useWeddingPhase } from "./lib/weddingPhase";
 
 function App() {
   const [route, setRoute] = useState(window.location.hash);
-  const { weddingDayStarted, ceremonyStarted } = useWeddingPhase();
+  const { ceremonyStarted } = useWeddingPhase();
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -99,7 +98,6 @@ function App() {
       <AccountSection />
       <PhotoUploadSection />
       <FooterSection />
-      {!weddingDayStarted && <RsvpPrompt />}
       {ceremonyStarted && <PhotoSharePrompt />}
     </main>
   );
