@@ -332,6 +332,7 @@ export function LocationSection() {
               </div>
             ))}
 
+            <div className="shuttle-contact">차량 안내: {invitation.transport.shuttle.vehicle}</div>
             <div className="shuttle-contact">{invitation.transport.shuttle.contact}</div>
             {invitation.transport.shuttle.temporary && (
               <p className="shuttle-temporary-note">
